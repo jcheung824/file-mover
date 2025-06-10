@@ -1,0 +1,33 @@
+{
+  "name": "file-move-refactor",
+  "version": "1.0.0",
+  "description": "Script to move files and update imports automatically",
+  "main": "move-file.js",
+  "type": "module",
+  "scripts": {
+    "move": "node move-file.js",
+    "test-move": "node move-file.js --dry-run",
+    "start": "node --max-old-space-size=16000 ./dist/move-file.js",
+    "startv": "node --max-old-space-size=16000 ./dist/move-file.js --verbose"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.27.5",
+    "@babel/traverse": "^7.27.4",
+    "fast-glob": "^3.3.3",
+    "glob": "^10.3.10"
+  },
+  "bin": {
+    "move-file": "./move-file.js"
+  },
+  "keywords": [
+    "refactor",
+    "imports",
+    "file-move"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.7",
+    "@types/node": "^22.15.30"
+  }
+}

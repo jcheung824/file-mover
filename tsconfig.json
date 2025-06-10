@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"]
+  },
+  "include": ["move-file.ts"],
+  "exclude": ["node_modules", "dist", "build"]
+}
