@@ -2,13 +2,16 @@
   "name": "file-move-refactor",
   "version": "1.0.0",
   "description": "Script to move files and update imports automatically",
-  "main": "move-file.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "move": "node move-file.js",
-    "test-move": "node move-file.js --dry-run",
-    "start": "node --max-old-space-size=16000 ./dist/move-file.js",
-    "startv": "node --max-old-space-size=16000 ./dist/move-file.js --verbose"
+    "move": "node ./src/index.js",
+    "test-move": "node ./src/index.js --dry-run",
+    "build": "tsc",
+    "postbuild": "node scripts/fix-extensions.js",
+    "start": "npm run build && node --max-old-space-size=16000 ./dist/index.js",
+    "watch": "tsc --watch --project tsconfig.json",
+    "startv": "npm run build && node --max-old-space-size=16000 ./dist/index.js --verbose"
   },
   "dependencies": {
     "@babel/parser": "^7.27.5",
@@ -17,7 +20,7 @@
     "glob": "^10.3.10"
   },
   "bin": {
-    "move-file": "./move-file.js"
+    "move-file": "./src/index.js"
   },
   "keywords": [
     "refactor",
@@ -28,6 +31,9 @@
   "license": "MIT",
   "devDependencies": {
     "@types/babel__traverse": "^7.20.7",
-    "@types/node": "^22.15.30"
+    "@types/node": "^22.15.30",
+    "@typescript-eslint/eslint-plugin": "^8.34.0",
+    "@typescript-eslint/parser": "^8.34.0",
+    "eslint": "^9.28.0"
   }
 }
