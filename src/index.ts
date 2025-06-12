@@ -22,6 +22,11 @@ interface TempArguments {
   cwd: string;
 }
 
+// Session state to track information during this run, such as all before/after file move paths
+const SESSION_STATE = {
+  fileMoves: [] as [fromPath: string, toPath: string][]
+};
+
 const TEMP_ARGUMENTS: TempArguments = {
   cwd: path.normalize(
     "C:/Users/jamescheung/Desktop/Work/project/power-platform-ux"
@@ -60,8 +65,8 @@ const CONFIG: Config = {
     "**/*.log",
     "**/*.html",
     "**/*.gif",
-    
-    
+
+
   ],
   includePatterns: INCLUDE_PATTERNS,
   dryRun: process.argv.includes("--dry-run"),
@@ -101,6 +106,11 @@ async function getDirectoryMoves(
 async function moveFileAndUpdateImports(
   moves: Array<[fromPath: string, toPath: string]>
 ): Promise<void> {
+
+  SESSION_STATE.fileMoves = moves.map(([fromPath, toPath]) => [
+    path.normalize(fromPath),
+    path.normalize(toPath),
+  ]);
 
   // Expand directory moves into individual file moves
   const expandedMoves: Array<[string, string]> = [];
@@ -330,11 +340,14 @@ async function analyzeImports(
         results.push({ file, imports });
       }
     } catch (error) {
-      console.warn(
-        `⚠️  Could not read ${file}: ${error instanceof Error ? error.message : String(error)
-        }`
-      );
-
+      const normalizedFile = path.normalize(file);
+      const scanningSelf = SESSION_STATE.fileMoves.some(([fromPath]) => normalizedFile === fromPath);
+      if (!scanningSelf) {
+        console.warn(
+          `⚠️  Could not read ${file}: ${error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
     }
   }
 
@@ -376,50 +389,69 @@ Supported file types:
 `);
 }
 
+// Export the main functionality for programmatic use
+export { moveFileAndUpdateImports };
+
 // Main execution
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+async function main() {
   // Check if there's a JSON file argument for batch moves
-  const jsonFileArg = process.argv.find((arg) => arg.endsWith(".json"));
+  try {
+    const jsonFileArg = process.argv.find((arg) => arg.endsWith(".json"));
 
-  if (jsonFileArg) {
-    // Load moves from JSON file
-    try {
-      const movesContent = await fs.readFile(jsonFileArg, "utf8");
-      const moves = JSON.parse(movesContent);
+    if (jsonFileArg) {
+      // Load moves from JSON file
+      try {
+        const movesContent = await fs.readFile(jsonFileArg, "utf8");
+        const moves = JSON.parse(movesContent);
 
-      if (
-        !Array.isArray(moves) ||
-        !moves.every(
-          (move) =>
-            Array.isArray(move) &&
-            move.length === 2 &&
-            typeof move[0] === "string" &&
-            typeof move[1] === "string"
-        )
-      ) {
-        throw new Error(
-          "JSON file must contain an array of [fromPath, toPath] tuples"
+        if (
+          !Array.isArray(moves) ||
+          !moves.every(
+            (move) =>
+              Array.isArray(move) &&
+              move.length === 2 &&
+              typeof move[0] === "string" &&
+              typeof move[1] === "string"
+          )
+        ) {
+          throw new Error(
+            "JSON file must contain an array of [fromPath, toPath] tuples"
+          );
+        }
+
+        await moveFileAndUpdateImports(moves);
+      } catch (error) {
+        console.error(
+          "❌ Error loading JSON file:",
+          error instanceof Error ? error.message : String(error)
         );
+        process.exit(1);
+      }
+    } else {
+      // Original command line interface for single moves
+      const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+
+      if (args.length !== 2) {
+        showUsage();
+        process.exit(1);
       }
 
-      await moveFileAndUpdateImports(moves);
-    } catch (error) {
-      console.error(
-        "❌ Error loading JSON file:",
-        error instanceof Error ? error.message : String(error)
-      );
-      process.exit(1);
+      const [oldPath, newPath] = args;
+      await moveFileAndUpdateImports([[oldPath, newPath]]);
     }
-  } else {
-    // Original command line interface for single moves
-    const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+    process.exit(0);
 
-    if (args.length !== 2) {
-      showUsage();
-      process.exit(1);
-    }
-
-    const [oldPath, newPath] = args;
-    await moveFileAndUpdateImports([[oldPath, newPath]]);
+  } catch (error) {
+    console.error("❌ Error:", error instanceof Error ? error.message : String(error));
+    process.exit(1);
   }
 }
+
+// Run the main function if this file is being executed directly
+if (process.argv[1]?.includes('file-mover') || process.argv[0]?.includes('node')) {
+  main().catch((error) => {
+    console.error("❌ Error:", error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
+

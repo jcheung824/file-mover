@@ -136,6 +136,13 @@ Add this pair to `move.json` and run the tool. All imports of `AdaptiveAuthoring
 
 ---
 
+### ppux workflow process
+1. install the 
+
+`package.json` command: `"file-mover": "node node_modules/file-mover/dist/index.js exmaple.json && echo 'File move completed successfully!' && rush lint -o powerva-main -o powerva-core -o powerva-microsoft-com -o powerva-embedded-experiences --fix"`
+
+---
+
 ## License
 
 MIT

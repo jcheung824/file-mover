@@ -29,7 +29,7 @@
     "glob": "^10.3.10"
   },
   "bin": {
-    "move-file": "./dist/index.js"
+    "file-mover": "./dist/index.js"
   },
   "keywords": [
     "refactor",
