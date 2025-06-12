@@ -1,4 +1,4 @@
-# File Move Refactor Tool
+# File Mover Refactor Tool
 
 A CLI tool to **move files and automatically update all relevant import statements** in a monorepo or multi-package TypeScript/JavaScript project.
 
