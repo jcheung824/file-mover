@@ -360,7 +360,7 @@ Examples:
   npx tsx move-file.ts src/components/Button.tsx src/ui/Button.tsx --dry-run
   
   # Batch moves from JSON file
-  npx tsx move-file.ts file-moves.json --dry-run --verbose
+  npx tsx move-file.ts file-movers.json --dry-run --verbose
   
 JSON file format:
   [

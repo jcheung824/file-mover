@@ -1,4 +1,4 @@
-// Types and interfaces for the file-move tool
+// Types and interfaces for the file-mover tool
 
 export interface ImportInfo {
   line: number;

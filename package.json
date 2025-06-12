@@ -1,5 +1,5 @@
 {
-  "name": "file-move-refactor",
+  "name": "file-mover",
   "version": "0.0.1",
   "description": "Script to move files and update imports automatically",
   "main": "dist/index.js",
@@ -34,7 +34,7 @@
   "keywords": [
     "refactor",
     "imports",
-    "file-move",
+    "file-mover",
     "typescript",
     "javascript",
     "code-refactoring",
@@ -44,12 +44,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jcheung824/file-move-tool.git"
+    "url": "git+https://github.com/jcheung824/file-mover-tool.git"
   },
   "bugs": {
-    "url": "https://github.com/jcheung824/file-move-tool/issues"
+    "url": "https://github.com/jcheung824/file-mover-tool/issues"
   },
-  "homepage": "https://github.com/jcheung824/file-move-tool#readme",
+  "homepage": "https://github.com/jcheung824/file-mover-tool#readme",
   "devDependencies": {
     "@types/babel__traverse": "^7.20.7",
     "@types/node": "^22.15.30",
