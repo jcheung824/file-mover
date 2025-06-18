@@ -13,5 +13,21 @@
     "node": true,
     "es2022": true
   },
-  "rules": {}
+  "rules": {
+    "max-len": ["warning", { 
+      "code": 100, 
+      "ignoreUrls": true, 
+      "ignoreStrings": true, 
+      "ignoreTemplateLiterals": true,
+      "ignoreRegExpLiterals": true,
+      "ignoreComments": true,
+      "ignoreFunctionSignatures": false
+    }],
+    "linebreak-style": ["error", "unix"],
+    "operator-linebreak": ["error", "before"],
+    "function-paren-newline": ["error", "multiline-arguments"],
+    "function-call-argument-newline": ["error", "consistent"],
+    "@typescript-eslint/method-signature-style": ["error", "property"],
+    "@typescript-eslint/type-annotation-spacing": ["error", { "before": false, "after": true }]
+  }
 } 

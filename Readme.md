@@ -143,6 +143,12 @@ Add this pair to `move.json` and run the tool. All imports of `AdaptiveAuthoring
 
 ---
 
+### Known issues and TODO:
+1. Use relative path(?)
+2. Current it doesn't support moving files from `apps` -> `package` due to it's imposable (We could but it'd mean more file scanning) to import app files from package and update file path from dist import to it's original export
+
+---
+
 ## License
 
 MIT

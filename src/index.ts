@@ -8,8 +8,9 @@ import fg from "fast-glob";
 // Helpers, types, and config
 import { ImportAnalysis, Config } from "./types";
 import {
-  generateTargetImportPaths,
-  findImportStatements,
+  generateImportPathVariations,
+  findDependencyImports,
+  fileMoveDirection,
 } from "./importUtils";
 import {
   movePhysicalFile,
@@ -65,9 +66,9 @@ const CONFIG: Config = {
     "**/*.log",
     "**/*.html",
     "**/*.gif",
-
-
   ],
+  includedPackageFolders: INCLUDED_PACKAGE_FOLDERS,
+  includedAppsFolders: INCLUDED_APPS_FOLDERS,
   includePatterns: INCLUDE_PATTERNS,
   dryRun: process.argv.includes("--dry-run"),
   verbose: process.argv.includes("--verbose"),
@@ -182,24 +183,24 @@ async function moveFileAndUpdateImports(
             });
           }
         });
-        continue; // Skip to next move in dry run
+        continue;
       }
 
-      // Move the physical file
       await movePhysicalFile(fromPath, toPath);
 
-      // Update imports inside the moved file itself
       await updateImportsInMovedFile(fromPath, toPath, CONFIG);
 
       // Update all imports in other files
       let updatedFiles = 0;
       for (const { file, imports } of importAnalysis) {
-        const updated = await updateImportsInFile(
-          file,
+        const fileDirection = fileMoveDirection({ oldPath: file, newPath: toPath, includedPackageFolders: CONFIG.includedPackageFolders, includedAppsFolders: CONFIG.includedAppsFolders });
+        const updated = await updateImportsInFile({
+          currentFilePath: file,
+          fileDirection,
           imports,
-          toPath,
-          CONFIG
-        );
+          newPath: toPath,
+          config: CONFIG
+        });
         if (updated) updatedFiles++;
       }
 
@@ -236,6 +237,8 @@ async function moveFileAndUpdateImports(
 
 /**
  * Validate that the move operation is valid
+ * @description oldPath - validate that the old path is a file or directory and if the new path file exists, throw an error
+ * @description newPath - validate that the new path is a file or directory and if the old path file exists, throw an error. Create the new path if it doesn't exist.
  */
 async function validateInputs(oldPath: string, newPath: string): Promise<void> {
   try {
@@ -312,7 +315,7 @@ async function analyzeImports(
   }
 
   // Generate all possible import paths for this target
-  const targetImportPaths = generateTargetImportPaths(targetPath, CONFIG);
+  const targetImportPaths = generateImportPathVariations(targetPath, CONFIG);
 
   if (CONFIG.verbose) {
     console.log(`🎯 Target import paths to match:`, targetImportPaths);
@@ -326,7 +329,7 @@ async function analyzeImports(
 
       const content = await fs.readFile(file, "utf8");
 
-      const imports = findImportStatements({
+      const imports = findDependencyImports({
         content,
         targetImportPaths,
         currentFile: file,

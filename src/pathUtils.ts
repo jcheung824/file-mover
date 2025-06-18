@@ -1,5 +1,6 @@
 // Utility functions for path normalization and import path handling
 import path from "path";
+import { isRelativeImport } from "./importUtils";
 
 export function normalizePath(filePath: string): string {
   return path.normalize(filePath).replace(/\\/g, "/");
@@ -10,23 +11,25 @@ export function removeExtension(filePath: string): string {
   return path.join(parsed.dir, parsed.name);
 }
 
-export function getMsImportPath(filePath: string): string | null {
+export function getMsImportPath(filePath: string): string {
   const normalized = normalizePath(filePath);
-  const match = normalized.match(/packages\/([^/]+)\/src\/(.*)$/);
-  if (match) {
-    const pkg = match[1];
-    const subpath = match[2].replace(/\.[^/.]+$/, "");
+  // Matches paths like "packages/package-name/src/file/path.ts" or "apps/app-name/src/file/path.ts"
+  // Group 1: package-name or app-name
+  // Group 2: file/path.ts
+  const matchGroups = normalized.match(/(?:packages|apps)\/([^/]+)\/src\/(.*)$/);
+  // /packages|app
+  if (matchGroups) {
+    const pkg = matchGroups[1];
+    const subpath = matchGroups[2].replace(/\.[^/.]+$/, "");
     return `@ms/${pkg}/lib/${subpath}`;
   }
-  return null;
-}
 
-export function generateNewMsImportPath(newPath: string): string | null {
-  return getMsImportPath(newPath);
+  throw new Error(`⚠️  getMsImportPath not found! This should be an error: ${normalized}`);
+
 }
 
 export function resolveImportPath(currentFile: string, importPath: string): string {
-  if (importPath.startsWith("./") || importPath.startsWith("../")) {
+  if (isRelativeImport(importPath)) {
     const currentDir = path.dirname(currentFile);
     return path.resolve(currentDir, importPath);
   }

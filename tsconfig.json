@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "esnext",
-   "moduleResolution": "node",
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -10,8 +10,11 @@
     "resolveJsonModule": true,
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
-    "types": ["node"]
+    "types": ["node"],
+    "sourceMap": true,
+    "inlineSourceMap": false,
+    "inlineSources": true
   },
-  "include": ["src/index.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "build"]
 }
