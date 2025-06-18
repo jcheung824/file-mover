@@ -193,10 +193,8 @@ async function moveFileAndUpdateImports(
       // Update all imports in other files
       let updatedFiles = 0;
       for (const { file, imports } of importAnalysis) {
-        const fileDirection = fileMoveDirection({ oldPath: file, newPath: toPath, includedPackageFolders: CONFIG.includedPackageFolders, includedAppsFolders: CONFIG.includedAppsFolders });
         const updated = await updateImportsInFile({
           currentFilePath: file,
-          fileDirection,
           imports,
           newPath: toPath,
           config: CONFIG

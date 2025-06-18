@@ -1,6 +1,6 @@
 // Import analysis and import statement finding logic
 import { ImportInfo, Config, FileDirection } from "./types.js";
-import { normalizePath, removeExtension, getMsImportPath, resolveImportPath } from "./pathUtils.js";
+import { normalizePath, removeExtension, getMsImportPath, resolveImportPath, getModuleType, handleMonoRepoImportPathToAbsolutePath, } from "./pathUtils.js";
 import { parse } from "@babel/parser";
 import traverseModule from "@babel/traverse";
 import path from "path";
@@ -15,24 +15,6 @@ export const isMonorepoPackageImport = (importPath: string): boolean =>
   typeof importPath === "string" && importPath.startsWith("@ms/");
 
 
-// Helper function to determine if a path is in packages or apps folder
-export const getPathType = ({ filePath, includedPackageFolders, includedAppsFolders }: { filePath: string, includedPackageFolders: string[], includedAppsFolders: string[] }): 'package' | 'app' | 'unknown' => {
-  const normalizedPath = filePath.replace(/\\/g, '/');
-
-  for (const packageFolder of includedPackageFolders) {
-    if (normalizedPath.includes(`packages/${packageFolder}`)) {
-      return 'package';
-    }
-  }
-
-  for (const appFolder of includedAppsFolders) {
-    if (normalizedPath.includes(`apps/${appFolder}`)) {
-      return 'app';
-    }
-  }
-
-  return 'unknown';
-}
 
 // Helper function to extract imports from AST node
 export const extractImportInfo = (pathNode: any, content: string, importPath: string): ImportInfo => {
@@ -140,32 +122,19 @@ export const findDependencyImports = (arg: {
 
 
 
-export const fileMoveDirection = ({ oldPath, newPath, includedPackageFolders, includedAppsFolders }: { oldPath: string, newPath: string, includedPackageFolders: string[], includedAppsFolders: string[] }): FileDirection => {
-  const oldPathType = getPathType({ filePath: oldPath, includedPackageFolders, includedAppsFolders });
-  const newPathType = getPathType({ filePath: newPath, includedPackageFolders, includedAppsFolders });
+export const fileMoveDirection = ({ oldPath, newPath }: { oldPath: string, newPath: string }): FileDirection => {
+  const oldModuleType = getModuleType(oldPath);
+  const newModuleType = getModuleType(newPath);
 
-  if (oldPathType === newPathType) {
+
+  if (oldModuleType.moduleType === newModuleType.moduleType && oldModuleType.moduleName === newModuleType.moduleName) {
     return 'self';
-  }
-  else if (oldPathType === 'package' && newPathType === 'app') {
-    return 'packageToApp';
-  }
-  // This logic needs to be improved
-  else if (oldPathType !== newPathType) {
+  } else if (oldModuleType.moduleType === 'packages' && newModuleType.moduleType === 'apps') {
+    console.warn(`⚠️  Could not determine file move direction for ${oldPath} → ${newPath}`);
+    return 'unknown';
+  } else {
     return 'betweenPackages';
   }
-  console.warn(`⚠️  Could not determine file move direction for ${oldPath} → ${newPath}`);
-  return 'unknown';
-}
-
-export const getPackageParts = (path: string): { packageName: string, subPath: string } => {
-  const normalizedPath = normalizePath(path);
-  const matchGroups = normalizedPath.match(/packages\/([^/]+)\/src\/(.*)$/);
-  if (matchGroups) {
-    return { packageName: matchGroups[1], subPath: matchGroups[2] };
-  }
-  console.warn(`⚠️  Could not determine package name for ${path}`);
-  return { packageName: "", subPath: "" };
 }
 
 export const updateSrcToLib = (path: string): string => {
@@ -209,12 +178,6 @@ export const createImportStatementRegexPatterns = (importPath: string): { quoted
   return { quotedPattern, unquotedPattern };
 };
 
-export const isFromDifferentPackage = (importPath: string, incomingImportPath: string): boolean => {
-  const { packageName: importPackageName } = getPackageParts(importPath);
-  const { packageName: incomingImportPackageName } = getPackageParts(incomingImportPath);
-  return importPackageName !== incomingImportPackageName;
-}
-
 export const setFileContentIfRegexMatches = (fileContent: string, regex: RegExp, replacement: string): string | null => {
   if (regex.test(fileContent)) {
     return fileContent.replace(regex, replacement);
@@ -222,12 +185,24 @@ export const setFileContentIfRegexMatches = (fileContent: string, regex: RegExp,
   return null;
 }
 
-export const handlePackageImportsUpdate = ({ config, currentImportPath, currentFilePath, newPath, fileContent }:
-  { currentImportPath: string, currentFilePath: string, newPath: string, config: Config, fileContent: string, imports: ImportInfo[]; }): { updated: boolean, updatedFileContent: string, updatedImportPath: string } => {
-  const fileDirection = fileMoveDirection({ oldPath: currentFilePath, newPath, includedPackageFolders: config.includedPackageFolders, includedAppsFolders: config.includedAppsFolders });
+// This I should separate this into two functions from many to one and one to many
+export const handlePackageImportsUpdate = ({ currentImportPath, currentFilePath, newPath, fileContent, manyToOne = true }:
+  { currentImportPath: string, currentFilePath: string, newPath: string, fileContent: string, manyToOne?: boolean }): { updated: boolean, updatedFileContent: string, updatedImportPath: string } => {
+
+  if (!manyToOne && isRelativeImport(newPath)) {
+    console.log(`⚠️  import from app is not supported`);
+    return {
+      updated: false,
+      updatedFileContent: fileContent,
+      updatedImportPath: currentImportPath
+    }
+  }
+
+  const fileDirection = fileMoveDirection({ oldPath: currentFilePath, newPath });
   let updatedImportPath: string = "";
   let updated: boolean = false;
   let newRelativePath = normalizePath(path.relative(currentFilePath, newPath));
+
   // Avoid bare import
   if (!newRelativePath.startsWith("../") && !newRelativePath.startsWith("./")) {
     newRelativePath = `./${newRelativePath}`;
@@ -236,15 +211,26 @@ export const handlePackageImportsUpdate = ({ config, currentImportPath, currentF
   const { quotedPattern, unquotedPattern } = createImportStatementRegexPatterns(currentImportPath);
 
   if (fileDirection === 'self') {
-    updatedImportPath = newRelativePath;
+    if (isMonorepoPackageImport(currentImportPath)) {
+      updatedImportPath = normalizePath(path.relative(currentFilePath, handleMonoRepoImportPathToAbsolutePath(currentFilePath, newPath)));
+    } else {
+      updatedImportPath = newRelativePath;
+    }
+
+
   } else if (fileDirection === 'betweenPackages') {
-    updatedImportPath = getMsImportPath(newPath);
+    if (isMonorepoPackageImport(newPath)) {
+      updatedImportPath = currentImportPath;
+    } else {
+      updatedImportPath = getMsImportPath(newPath);
+    }
   } else {
+    // We can't import package from app. User Have to move other dependencies to the app as well.
     console.warn(`⚠️  Currently not supported: ${currentFilePath} → ${newPath}`);
     return { updated, updatedFileContent: fileContent, updatedImportPath };
   }
 
-  // Try quoted pattern first, then unquoted pattern
+  // AST have walked through the file tree, we should just directly update over there instead of search again
   const updatedContent = setFileContentIfRegexMatches(fileContent, quotedPattern, `$1${updatedImportPath}$1`)
     ?? setFileContentIfRegexMatches(fileContent, unquotedPattern, updatedImportPath);
 

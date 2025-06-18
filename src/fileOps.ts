@@ -1,18 +1,13 @@
 // File operations for moving files and updating imports
 import { promises as fs } from "fs";
-import path from "path";
-import { ImportInfo, Config, FileDirection } from "./types.js";
-import { normalizePath, removeExtension, getMsImportPath } from "./pathUtils.js";
+import { ImportInfo, Config } from "./types.js";
 import { parse } from "@babel/parser";
 import traverseModule from "@babel/traverse";
 import {
   extractImportInfo,
-  fileMoveDirection,
-  getPackageParts,
   handlePackageImportsUpdate,
   isMonorepoPackageImport,
   isRelativeImport,
-  updateSrcToLib,
 } from "./importUtils.js";
 
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
@@ -24,13 +19,11 @@ export async function movePhysicalFile(oldPath: string, newPath: string): Promis
 
 export async function updateImportsInFile({
   currentFilePath,
-  fileDirection,
   imports,
   newPath,
   config,
 }: {
   currentFilePath: string;
-  fileDirection: FileDirection;
   imports: ImportInfo[];
   newPath: string;
   config: Config;
@@ -46,9 +39,7 @@ export async function updateImportsInFile({
         currentImportPath,
         currentFilePath,
         newPath,
-        config,
         fileContent,
-        imports,
       })
 
       hasChanges = hasChanges || updated;
@@ -138,44 +129,12 @@ function handleWithinModuleImports(
   relativeImports: ImportInfo[]
 ): void {
   const importPath = pathNode.node.source?.value;
-  if (typeof importPath === "string" && isRelativeImport(importPath)) {
+  if (typeof importPath === "string" && (isRelativeImport(importPath) || isMonorepoPackageImport(importPath))) {
     relativeImports.push(extractImportInfo(pathNode, content, importPath));
   }
 }
 
-function handleIntraModulesImport(
-  pathNode: any,
-  content: string,
-  relativeImports: ImportInfo[],
-  attentionNeededImports: ImportInfo[]
-): void {
-  const importPath = pathNode.node.source?.value;
-  if (isRelativeImport(importPath) || isMonorepoPackageImport(importPath)) {
-    attentionNeededImports.push(extractImportInfo(pathNode, content, importPath));
-  }
-}
 
-function handleAstImportFound({
-  pathNode,
-  content,
-  fileDirection,
-  relativeImports,
-  attentionNeededImports,
-}: {
-  pathNode: any;
-  content: string;
-  fileDirection: FileDirection;
-  relativeImports: ImportInfo[];
-  attentionNeededImports: ImportInfo[];
-}): void {
-  if (fileDirection === "self") {
-    handleWithinModuleImports(pathNode, content, relativeImports);
-  } else if (fileDirection === "betweenPackages") {
-    handleIntraModulesImport(pathNode, content, relativeImports, attentionNeededImports);
-  } else if (fileDirection === "packageToApp") {
-    console.warn(`⚠️  Package should not be moved to app`);
-  }
-}
 
 //TODO:
 // 1. Should be a different algorithm for it to update to other files 
@@ -194,12 +153,6 @@ export async function updateImportsInMovedFile(
     let hasChanges = false;
     let needsManualResolution = false;
     let ast;
-    const fileDirection = fileMoveDirection({
-      oldPath,
-      newPath,
-      includedPackageFolders: config.includedPackageFolders,
-      includedAppsFolders: config.includedAppsFolders,
-    });
 
     try {
       ast = parse(content, {
@@ -214,37 +167,13 @@ export async function updateImportsInMovedFile(
       }
       return;
     }
-    const attentionNeededImports: ImportInfo[] = [];
+    // const attentionNeededImports: ImportInfo[] = []; // Do I really need this?
     const relativeImports: ImportInfo[] = [];
 
     // Should probably update the files whiles we are traversing the set
     traverse(ast, {
       ImportDeclaration(pathNode) {
-        handleAstImportFound({
-          pathNode,
-          content,
-          fileDirection,
-          relativeImports,
-          attentionNeededImports,
-        });
-      },
-      ExportAllDeclaration(pathNode) {
-        handleAstImportFound({
-          pathNode,
-          content,
-          fileDirection,
-          relativeImports,
-          attentionNeededImports,
-        });
-      },
-      ExportNamedDeclaration(pathNode) {
-        handleAstImportFound({
-          pathNode,
-          content,
-          fileDirection,
-          relativeImports,
-          attentionNeededImports,
-        });
+        handleWithinModuleImports(pathNode, content, relativeImports);
       },
       CallExpression(pathNode) {
         const callee = pathNode.node.callee;
@@ -278,15 +207,65 @@ export async function updateImportsInMovedFile(
     if (config.verbose) {
       console.log(`Found ${relativeImports.length} relative imports to update`);
     }
+
     for (const importInfo of relativeImports) {
+      //   const oldImportPath = importInfo.importPath;
+      //   const oldResolvedPath = path.resolve(oldFileDir, oldImportPath);
+      //   let newRelativePath = normalizePath(
+      //     path.relative(newFileDir, oldResolvedPath)
+      //   );
+      //   if (
+      //     !newRelativePath.startsWith("../") &&
+      //     !newRelativePath.startsWith("./")
+      //   ) {
+      //     newRelativePath = `./${newRelativePath}`;
+      //   }
+      //   if (oldImportPath !== newRelativePath) {
+      //     const escapeRegex = (str: string): string =>
+      //       str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      //     const quotedPattern = new RegExp(
+      //       `(['"\`])${escapeRegex(oldImportPath)}\\1`,
+      //       "g"
+      //     );
+      //     if (quotedPattern.test(updatedContent)) {
+      //       updatedContent = updatedContent.replace(
+      //         quotedPattern,
+      //         `$1${newRelativePath}$1`
+      //       );
+      //       hasChanges = true;
+      //       if (config.verbose) {
+      //         console.log(
+      //           `    📝 Updated import: ${oldImportPath} → ${newRelativePath}`
+      //         );
+      //       }
+      //     }
+      //   }
+      // }
+
+      // const oldImportPath = importInfo.importPath;
+      // const oldResolvedPath = path.resolve(oldPath, oldImportPath);
+      // let newRelativePath = normalizePath(path.relative(newPath, oldResolvedPath));
+      // if (!newRelativePath.startsWith("../") && !newRelativePath.startsWith("./")) {
+      //   newRelativePath = `./${newRelativePath}`;
+      // }
+      // if (oldImportPath !== newRelativePath) {
+      //   const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      //   const quotedPattern = new RegExp(`(['"\`])${escapeRegex(oldImportPath)}\\1`, "g");
+
+      // TODOs:
+      //if: file import is part of the move. update newPath as the path in json.
+      //Find all potential import path pattern and replace them all with the relative + monorepo import path 
+
+      //TODO:
+      // 1. Find all potential import path pattern and replace them all with the relative + monorepo import path 
+      // 2. Update the newPath as the path in json.
 
       const { updated, updatedFileContent, updatedImportPath } = handlePackageImportsUpdate({
         currentImportPath: importInfo.importPath,
-        currentFilePath: oldPath,
-        newPath,
-        config,
+        currentFilePath: newPath,
+        newPath: importInfo.importPath,
         fileContent: updatedContent,
-        imports: relativeImports,
+        manyToOne: false,
       })
       if (updated) {
         updatedContent = updatedFileContent;
@@ -295,6 +274,7 @@ export async function updateImportsInMovedFile(
           console.log(`    📝 Updated import: ${importInfo.importPath} → ${updatedImportPath}`);
         }
       }
+
       // const oldImportPath = importInfo.importPath;
       // const oldResolvedPath = path.resolve(oldFileDir, oldImportPath);
       // let newRelativePath = normalizePath(path.relative(newFileDir, oldResolvedPath));
@@ -312,14 +292,16 @@ export async function updateImportsInMovedFile(
       //     }
       //   }
       // }
-    }
+      // }
 
-    // Add attention needed imports comment to the file
-    if (attentionNeededImports.length > 0) {
-      const attentionComment = `\n\n/*\n * ATTENTION NEEDED: The following imports require manual resolution:\n${attentionNeededImports.map((imp) => ` * ${imp.originalLine}`).join("\n")}\n */\n`;
-      updatedContent += attentionComment;
-      hasChanges = true;
-      needsManualResolution = true;
+      // Add attention needed imports comment to the file
+      // if (attentionNeededImports.length > 0) {
+      //   const attentionComment = `\n\n/*\n * ATTENTION NEEDED: The following imports require manual resolution:\n${attentionNeededImports.map((imp) => ` * ${imp.originalLine}`).join("\n")}\n */\n`;
+      //   updatedContent += attentionComment;
+      //   hasChanges = true;
+      //   needsManualResolution = true;
+      // }
+
     }
 
     if (hasChanges) {
