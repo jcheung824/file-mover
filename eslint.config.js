@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import prettier from "eslint-plugin-prettier";
 
 export default [
   js.configs.recommended,
@@ -15,9 +16,22 @@ export default [
     },
     plugins: {
       "@typescript-eslint": tseslint,
+      prettier: prettier,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      "max-len": ["warning", 100],
+      "linebreak-style": ["error", "unix"],
+      "operator-linebreak": "error",
+      "prettier/prettier": [
+        "error",
+        {
+          printWidth: 100,
+          singleQuote: false,
+          trailingComma: "es5",
+          endOfLine: "crlf",
+        },
+      ],
     },
   },
   {
@@ -35,8 +49,8 @@ export default [
         __filename: "readonly",
         exports: "readonly",
         module: "readonly",
-        require: "readonly"
-      }
-    }
-  }
-]; 
+        require: "readonly",
+      },
+    },
+  },
+];

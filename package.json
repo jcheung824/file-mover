@@ -1,6 +1,6 @@
 {
   "name": "file-mover",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Script to move files and update imports automatically",
   "main": "dist/index.js",
   "type": "module",
@@ -17,10 +17,12 @@
     "test-move": "node ./dist/index.js --dry-run",
     "build": "tsc",
     "postbuild": "node scripts/fix-extensions.js",
-    "start": "npm run build && node --max-old-space-size=16000 ./dist/index.js",
+    "start": "npm run build && node --max-old-space-size=16000 ./dist/index.js example.json",
     "watch": "tsc --watch --project tsconfig.json",
     "startv": "npm run build && node --max-old-space-size=16000 ./dist/index.js --verbose",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint ."
   },
   "dependencies": {
     "@babel/parser": "^7.27.5",
@@ -55,6 +57,8 @@
     "@types/node": "^22.15.30",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
-    "eslint": "^9.28.0"
+    "eslint": "^8.56.0",
+    "eslint-plugin-prettier": "^5.5.0",
+    "prettier": "^3.5.3"
   }
 }
