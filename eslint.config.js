@@ -21,7 +21,7 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       "max-len": ["warn", 120],
-      "linebreak-style": ["error", "unix"],
+      "linebreak-style": ["error", "auto"],
       "operator-linebreak": "error",
       "prettier/prettier": [
         "error",

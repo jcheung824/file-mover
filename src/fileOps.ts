@@ -11,6 +11,7 @@ import {
   isRelativeImport,
 } from "./importUtils.js";
 import { CallExpression, ImportDeclaration } from "@babel/types";
+import path from "path";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
@@ -24,7 +25,6 @@ export async function updateImportsInFile({
   currentFilePath,
   imports,
   newPath,
-  config,
 }: {
   currentFilePath: string;
   imports: ImportInfo[];
@@ -106,7 +106,7 @@ export async function updateImportsInFile({
       //   }
       // }
 
-      if (config.verbose && hasChanges) {
+      if (globalThis.appState.verbose && hasChanges) {
         console.log(`  📝 ${currentFilePath}: ${currentImportPath} → ${updatedImportPath}`);
       }
     }
@@ -138,7 +138,7 @@ function handleWithinModuleImports(
 // 1.1 while traversing other files, I should fine if there's a file that's relative to the current file and find the import path if
 // 1.1.1 if it's intra module, I should update with relative path
 // 1.1.2 if it's inter module, I should update with ms import path
-export async function updateImportsInMovedFile(oldPath: string, newPath: string, config: Config): Promise<void> {
+export async function updateImportsInMovedFile(oldPath: string, newPath: string): Promise<void> {
   try {
     console.log(`📝 Updating imports inside moved file: ${newPath}`);
     const content = await fs.readFile(newPath, "utf8");
@@ -153,7 +153,7 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string,
         plugins: ["typescript", "jsx", "decorators-legacy", "classProperties", "dynamicImport"],
       });
     } catch (e) {
-      if (config.verbose) {
+      if (globalThis.appState.verbose) {
         console.warn(`⚠️  Could not parse moved file ${newPath}: ${e instanceof Error ? e.message : String(e)}`);
       }
       return;
@@ -186,7 +186,7 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string,
         }
       },
     });
-    if (config.verbose) {
+    if (globalThis.appState.verbose) {
       console.log(`Found ${relativeImports.length} relative imports to update`);
     }
 
@@ -198,6 +198,13 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string,
       //TODO:
       // 1. Find all potential import path pattern and replace them all with the relative + monorepo import path
       // 2. Update the newPath as the path in json.
+      const targetImportFileAbsPath = path.resolve(path.dirname(oldPath), importInfo.importPath);
+      if (globalThis.appState.fileMoveMap.has(targetImportFileAbsPath)) {
+        const latestPath = globalThis.appState.fileMoveMap.get(targetImportFileAbsPath);
+        if (latestPath) {
+          newPath = latestPath;
+        }
+      }
 
       const { updated, updatedFileContent, updatedImportPath } = handleMovingFileImportsUpdate({
         importPath: importInfo.importPath,
@@ -208,7 +215,7 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string,
       if (updated) {
         updatedContent = updatedFileContent;
         hasChanges = true;
-        if (config.verbose) {
+        if (globalThis.appState.verbose) {
           console.log(`    📝 Updated import: ${importInfo.importPath} → ${updatedImportPath}`);
         }
       }
@@ -228,7 +235,7 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string,
       if (needsManualResolution) {
         console.log(`  ⚠️  Manual resolution needed for imports`);
       }
-    } else if (config.verbose) {
+    } else if (globalThis.appState.verbose) {
       console.log(`  ℹ️  No import updates needed in moved file`);
     }
   } catch (error) {
