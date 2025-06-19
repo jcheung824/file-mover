@@ -45,6 +45,8 @@ export const getRelativeImportPath = (fromFile: string, toFile: string) => {
   }
 };
 
+export const checkIfFileIsPartOfMove = (filePath: string): boolean => globalThis.appState.fileMoveMap.has(filePath);
+
 // Helper function to extract imports from AST node
 export const extractImportInfo = (pathNode: NodePath, content: string, importPath: string): ImportInfo => {
   return {
@@ -279,7 +281,7 @@ export const handleMovingFileImportsUpdate = ({
   const targetImportFileAbsPath = path.resolve(path.dirname(originalMovedFilePath), importPath);
   
   // Check if the imported file has been moved
-  const importFilePath = globalThis.appState.fileMoveMap.has(targetImportFileAbsPath)
+  const importFilePath = checkIfFileIsPartOfMove(targetImportFileAbsPath)
     ? globalThis.appState.fileMoveMap.get(targetImportFileAbsPath) || targetImportFileAbsPath
     : isRelativeImport(importPath)
       ? targetImportFileAbsPath
