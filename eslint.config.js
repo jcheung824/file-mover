@@ -20,13 +20,13 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
-      "max-len": ["warn", 100],
+      "max-len": ["warn", 120],
       "linebreak-style": ["error", "unix"],
       "operator-linebreak": "error",
       "prettier/prettier": [
         "error",
         {
-          printWidth: 100,
+          printWidth: 120,
           singleQuote: false,
           trailingComma: "es5",
           endOfLine: "lf",

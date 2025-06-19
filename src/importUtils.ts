@@ -9,8 +9,11 @@ import {
   handleMonoRepoImportPathToAbsolutePath,
 } from "./pathUtils.js";
 import { parse } from "@babel/parser";
-import traverseModule from "@babel/traverse";
+import traverseModule, { NodePath } from "@babel/traverse";
+import { CallExpression, ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration } from "@babel/types";
 import path from "path";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse = (traverseModule as any).default || traverseModule;
 
 export const isRelativeImport = (importPath: string): boolean =>
@@ -20,18 +23,34 @@ export const isRelativeImport = (importPath: string): boolean =>
 export const isMonorepoPackageImport = (importPath: string): boolean =>
   typeof importPath === "string" && importPath.startsWith("@ms/");
 
+export const getRelativeImportPath = (fromFile: string, toFile: string) => {
+  let relativePath = normalizePath(path.relative(path.dirname(fromFile), path.dirname(toFile)));
+
+  if (!relativePath) {
+    relativePath = ".";
+  }
+
+  const ext = path.extname(toFile);
+  let fileName = path.basename(toFile);
+
+  // Keep extension such as .png so that it'd remain valid import path
+  if (ext === ".ts" || ext === ".tsx") {
+    fileName = path.basename(toFile, ext);
+  }
+
+  if (relativePath === ".") {
+    return `./${fileName}`;
+  } else {
+    return `${relativePath}/${fileName}`;
+  }
+};
+
 // Helper function to extract imports from AST node
-export const extractImportInfo = (
-  pathNode: any,
-  content: string,
-  importPath: string
-): ImportInfo => {
+export const extractImportInfo = (pathNode: NodePath, content: string, importPath: string): ImportInfo => {
   return {
     line: pathNode.node.loc?.start.line || 0,
     originalLine:
-      content
-        .split("\n")
-        [pathNode.node.loc?.start?.line ? pathNode.node.loc.start.line - 1 : 0]?.trim() || "",
+      content.split("\n")[pathNode.node.loc?.start?.line ? pathNode.node.loc.start.line - 1 : 0]?.trim() || "",
     importPath,
     matchedText: pathNode.toString(),
   };
@@ -70,41 +89,30 @@ export const findDependencyImports = (arg: {
     });
   } catch (e) {
     if (config.verbose) {
-      console.warn(
-        `⚠️  Could not parse ${currentFile}: ${e instanceof Error ? e.message : String(e)}`
-      );
+      console.warn(`⚠️  Could not parse ${currentFile}: ${e instanceof Error ? e.message : String(e)}`);
     }
     return imports;
   }
   traverse(ast, {
-    ImportDeclaration: (pathNode: any) => {
-      const importPath = pathNode.node.source.value;
-      if (
-        typeof importPath === "string" &&
-        matchesTarget({ importPath, targetImportPaths, currentFile })
-      ) {
-        imports.push(extractImportInfo(pathNode, content, importPath));
-      }
-    },
-    ExportAllDeclaration: (pathNode: any) => {
+    ImportDeclaration: (pathNode: NodePath<ImportDeclaration>) => {
       const importPath = pathNode.node.source?.value;
-      if (
-        typeof importPath === "string" &&
-        matchesTarget({ importPath, targetImportPaths, currentFile })
-      ) {
+      if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
       }
     },
-    ExportNamedDeclaration: (pathNode: any) => {
+    ExportAllDeclaration: (pathNode: NodePath<ExportAllDeclaration>) => {
       const importPath = pathNode.node.source?.value;
-      if (
-        typeof importPath === "string" &&
-        matchesTarget({ importPath, targetImportPaths, currentFile })
-      ) {
+      if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
       }
     },
-    CallExpression: (pathNode: any) => {
+    ExportNamedDeclaration: (pathNode: NodePath<ExportNamedDeclaration>) => {
+      const importPath = pathNode.node.source?.value;
+      if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
+        imports.push(extractImportInfo(pathNode, content, importPath));
+      }
+    },
+    CallExpression: (pathNode: NodePath<CallExpression>) => {
       const callee = pathNode.node.callee;
       if ((callee.type === "Identifier" && callee.name === "require") || callee.type === "Import") {
         const arg0 = pathNode.node.arguments[0];
@@ -120,20 +128,11 @@ export const findDependencyImports = (arg: {
   return imports;
 };
 
-export const fileMoveDirection = ({
-  oldPath,
-  newPath,
-}: {
-  oldPath: string;
-  newPath: string;
-}): FileDirection => {
+export const fileMoveDirection = ({ oldPath, newPath }: { oldPath: string; newPath: string }): FileDirection => {
   const oldModuleType = getModuleType(oldPath);
   const newModuleType = getModuleType(newPath);
 
-  if (
-    oldModuleType.moduleType === newModuleType.moduleType &&
-    oldModuleType.moduleName === newModuleType.moduleName
-  ) {
+  if (oldModuleType.moduleType === newModuleType.moduleType && oldModuleType.moduleName === newModuleType.moduleName) {
     return "self";
   } else if (oldModuleType.moduleType === "packages" && newModuleType.moduleType === "apps") {
     console.warn(`⚠️  Could not determine file move direction for ${oldPath} → ${newPath}`);
@@ -212,18 +211,14 @@ export const handlePackageImportsUpdate = ({
   updatedFileContent: string;
   updatedImportPath: string;
 } => {
-  const currentFilePathDirectory = path.dirname(currentFilePath);
-
   const fileDirection = fileMoveDirection({
-    oldPath: currentFilePathDirectory,
+    oldPath: currentFilePath,
     newPath,
   });
 
   let updatedImportPath: string = "";
   let updated: boolean = false;
-  let newRelativePath = normalizePath(
-    removeExtension(path.relative(currentFilePathDirectory, newPath))
-  );
+  let newRelativePath = getRelativeImportPath(currentFilePath, newPath);
 
   // Avoid bare import
   if (!newRelativePath.startsWith("../") && !newRelativePath.startsWith("./")) {
@@ -234,11 +229,9 @@ export const handlePackageImportsUpdate = ({
 
   if (fileDirection === "self") {
     if (isMonorepoPackageImport(currentImportPath)) {
-      updatedImportPath = normalizePath(
-        path.relative(
-          currentFilePathDirectory,
-          handleMonoRepoImportPathToAbsolutePath(currentFilePathDirectory, newPath)
-        )
+      updatedImportPath = getRelativeImportPath(
+        currentFilePath,
+        handleMonoRepoImportPathToAbsolutePath(currentFilePath, newPath)
       );
     } else {
       updatedImportPath = newRelativePath;
@@ -284,10 +277,8 @@ export const handleMovingFileImportsUpdate = ({
   updatedFileContent: string;
   updatedImportPath: string;
 } => {
-  const originalMovedFilePathDirectory = path.dirname(originalMovedFilePath);
-
   const importFilePath = isRelativeImport(importPath)
-    ? path.resolve(originalMovedFilePathDirectory, importPath)
+    ? path.resolve(path.dirname(originalMovedFilePath), importPath)
     : importPath;
 
   const fileDirection = fileMoveDirection({
@@ -297,9 +288,7 @@ export const handleMovingFileImportsUpdate = ({
 
   let updatedImportPath: string = "";
   let updated: boolean = false;
-  let newRelativePath = normalizePath(
-    removeExtension(path.relative(path.dirname(newMovedFilePath), importFilePath))
-  );
+  let newRelativePath = getRelativeImportPath(newMovedFilePath, importFilePath);
 
   // log all relative path info
 
@@ -318,11 +307,9 @@ export const handleMovingFileImportsUpdate = ({
 
   if (fileDirection === "self") {
     if (isMonorepoPackageImport(importPath)) {
-      updatedImportPath = normalizePath(
-        path.relative(
-          newMovedFilePath,
-          handleMonoRepoImportPathToAbsolutePath(newMovedFilePath, importFilePath)
-        )
+      updatedImportPath = getRelativeImportPath(
+        newMovedFilePath,
+        handleMonoRepoImportPathToAbsolutePath(newMovedFilePath, importFilePath)
       );
     } else {
       updatedImportPath = newRelativePath;

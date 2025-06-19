@@ -79,10 +79,7 @@ export const getPathType = ({
   return "unknown";
 };
 
-export const handleMonoRepoImportPathToAbsolutePath = (
-  directory: string,
-  importPath: string
-): string => {
+export const handleMonoRepoImportPathToAbsolutePath = (directory: string, importPath: string): string => {
   if (!isMonorepoPackageImport(importPath)) {
     return importPath;
   }
