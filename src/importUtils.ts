@@ -276,9 +276,14 @@ export const handleMovingFileImportsUpdate = ({
   updatedFileContent: string;
   updatedImportPath: string;
 } => {
-  const importFilePath = isRelativeImport(importPath)
-    ? path.resolve(path.dirname(originalMovedFilePath), importPath)
-    : importPath;
+  const targetImportFileAbsPath = path.resolve(path.dirname(originalMovedFilePath), importPath);
+  
+  // Check if the imported file has been moved
+  const importFilePath = globalThis.appState.fileMoveMap.has(targetImportFileAbsPath)
+    ? globalThis.appState.fileMoveMap.get(targetImportFileAbsPath) || targetImportFileAbsPath
+    : isRelativeImport(importPath)
+      ? targetImportFileAbsPath
+      : importPath;
 
   const fileDirection = fileMoveDirection({
     oldPath: newMovedFilePath,

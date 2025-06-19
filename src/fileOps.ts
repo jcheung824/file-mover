@@ -191,20 +191,9 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
     }
 
     for (const importInfo of relativeImports) {
-      // TODOs:
-      //if: file import is part of the move. update newPath as the path in json.
-      //Find all potential import path pattern and replace them all with the relative + monorepo import path
 
       //TODO:
       // 1. Find all potential import path pattern and replace them all with the relative + monorepo import path
-      // 2. Update the newPath as the path in json.
-      const targetImportFileAbsPath = path.resolve(path.dirname(oldPath), importInfo.importPath);
-      if (globalThis.appState.fileMoveMap.has(targetImportFileAbsPath)) {
-        const latestPath = globalThis.appState.fileMoveMap.get(targetImportFileAbsPath);
-        if (latestPath) {
-          newPath = latestPath;
-        }
-      }
 
       const { updated, updatedFileContent, updatedImportPath } = handleMovingFileImportsUpdate({
         importPath: importInfo.importPath,
