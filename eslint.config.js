@@ -20,7 +20,7 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
-      "max-len": ["warning", 100],
+      "max-len": ["warn", 100],
       "linebreak-style": ["error", "unix"],
       "operator-linebreak": "error",
       "prettier/prettier": [
@@ -29,7 +29,7 @@ export default [
           printWidth: 100,
           singleQuote: false,
           trailingComma: "es5",
-          endOfLine: "crlf",
+          endOfLine: "lf",
         },
       ],
     },

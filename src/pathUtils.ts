@@ -27,7 +27,6 @@ export function getMsImportPath(filePath: string): string {
   throw new Error(`⚠️  getMsImportPath not found! This should be an error: ${normalized}`);
 }
 
-
 export function resolveImportPath(currentFile: string, importPath: string): string {
   if (isRelativeImport(importPath)) {
     const currentDir = path.dirname(currentFile);
@@ -36,13 +35,11 @@ export function resolveImportPath(currentFile: string, importPath: string): stri
   return importPath;
 }
 
-
 /**
  * @param importPath - The import path to get the module type for.
  * @returns The module type as 'packages/package-name' or 'apps/app-name', or null if it cannot be determined.
  */
-export const getModuleType = (importPath: string): { moduleType: string, moduleName: string } => {
-
+export const getModuleType = (importPath: string): { moduleType: string; moduleName: string } => {
   const normalized = normalizePath(importPath);
 
   const packageName = isMonorepoPackageImport(normalized)
@@ -52,51 +49,59 @@ export const getModuleType = (importPath: string): { moduleType: string, moduleN
     throw new Error(`⚠️  Could not determine package name for ${importPath}`);
   }
 
-  return { moduleType: packageName, moduleName: packageName.split('/')[1] };
-}
+  return { moduleType: packageName, moduleName: packageName.split("/")[1] };
+};
 
 // Helper function to determine if a path is in packages or apps folder
-export const getPathType = ({ filePath, includedPackageFolders, includedAppsFolders }: { filePath: string, includedPackageFolders: string[], includedAppsFolders: string[] }): 'package' | 'app' | 'unknown' => {
-  const normalizedPath = filePath.replace(/\\/g, '/');
+export const getPathType = ({
+  filePath,
+  includedPackageFolders,
+  includedAppsFolders,
+}: {
+  filePath: string;
+  includedPackageFolders: string[];
+  includedAppsFolders: string[];
+}): "package" | "app" | "unknown" => {
+  const normalizedPath = filePath.replace(/\\/g, "/");
 
   for (const packageFolder of includedPackageFolders) {
     if (normalizedPath.includes(`packages/${packageFolder}`)) {
-      return 'package';
+      return "package";
     }
   }
 
   for (const appFolder of includedAppsFolders) {
     if (normalizedPath.includes(`apps/${appFolder}`)) {
-      return 'app';
+      return "app";
     }
   }
 
-  return 'unknown';
-}
+  return "unknown";
+};
 
-export const handleMonoRepoImportPathToAbsolutePath = (directory: string, importPath: string): string => {
-
+export const handleMonoRepoImportPathToAbsolutePath = (
+  directory: string,
+  importPath: string
+): string => {
   if (!isMonorepoPackageImport(importPath)) {
     return importPath;
   }
 
   // Parse import: @ms/powerva-main/lib/base/Telemetry -> powerva-main/src/base/Telemetry
-  const [, packageName, ...pathParts] = importPath.split('/');
-  const srcPath = pathParts.join('/').replace(/^lib/, 'src');
+  const [, packageName, ...pathParts] = importPath.split("/");
+  const srcPath = pathParts.join("/").replace(/^lib/, "src");
 
   // Find packages directory from current file path
   const currentDir = path.dirname(directory);
-  const packagesIndex = currentDir.indexOf('packages');
-
+  const packagesIndex = currentDir.indexOf("packages");
 
   // Might need to improve this logic
   if (packagesIndex === -1) {
-    throw new Error('Could not find packages directory in the current path');
+    throw new Error("Could not find packages directory in the current path");
   }
 
   // Build absolute path: packages/packageName/srcPath
-  const packagesDir = currentDir.substring(0, packagesIndex + 'packages'.length);
+  const packagesDir = currentDir.substring(0, packagesIndex + "packages".length);
 
   return path.normalize(path.join(packagesDir, packageName, srcPath));
-}
-
+};

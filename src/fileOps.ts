@@ -5,6 +5,7 @@ import { parse } from "@babel/parser";
 import traverseModule from "@babel/traverse";
 import {
   extractImportInfo,
+  handleMovingFileImportsUpdate,
   handlePackageImportsUpdate,
   isMonorepoPackageImport,
   isRelativeImport,
@@ -40,7 +41,7 @@ export async function updateImportsInFile({
         currentFilePath,
         newPath,
         fileContent,
-      })
+      });
 
       hasChanges = hasChanges || updated;
       if (updated) {
@@ -103,7 +104,6 @@ export async function updateImportsInFile({
       //   }
       // }
 
-
       if (config.verbose && hasChanges) {
         console.log(`  📝 ${currentFilePath}: ${currentImportPath} → ${updatedImportPath}`);
       }
@@ -129,15 +129,16 @@ function handleWithinModuleImports(
   relativeImports: ImportInfo[]
 ): void {
   const importPath = pathNode.node.source?.value;
-  if (typeof importPath === "string" && (isRelativeImport(importPath) || isMonorepoPackageImport(importPath))) {
+  if (
+    typeof importPath === "string" &&
+    (isRelativeImport(importPath) || isMonorepoPackageImport(importPath))
+  ) {
     relativeImports.push(extractImportInfo(pathNode, content, importPath));
   }
 }
 
-
-
 //TODO:
-// 1. Should be a different algorithm for it to update to other files 
+// 1. Should be a different algorithm for it to update to other files
 // 1.1 while traversing other files, I should fine if there's a file that's relative to the current file and find the import path if
 // 1.1.1 if it's intra module, I should update with relative path
 // 1.1.2 if it's inter module, I should update with ms import path
@@ -193,9 +194,9 @@ export async function updateImportsInMovedFile(
                 originalLine:
                   content
                     .split("\n")
-                  [
-                    pathNode.node.loc?.start?.line ? pathNode.node.loc.start.line - 1 : 0
-                  ]?.trim() || "",
+                    [
+                      pathNode.node.loc?.start?.line ? pathNode.node.loc.start.line - 1 : 0
+                    ]?.trim() || "",
                 importPath,
                 matchedText: pathNode.toString(),
               });
@@ -254,19 +255,18 @@ export async function updateImportsInMovedFile(
 
       // TODOs:
       //if: file import is part of the move. update newPath as the path in json.
-      //Find all potential import path pattern and replace them all with the relative + monorepo import path 
+      //Find all potential import path pattern and replace them all with the relative + monorepo import path
 
       //TODO:
-      // 1. Find all potential import path pattern and replace them all with the relative + monorepo import path 
+      // 1. Find all potential import path pattern and replace them all with the relative + monorepo import path
       // 2. Update the newPath as the path in json.
 
-      const { updated, updatedFileContent, updatedImportPath } = handlePackageImportsUpdate({
-        currentImportPath: importInfo.importPath,
-        currentFilePath: newPath,
-        newPath: importInfo.importPath,
+      const { updated, updatedFileContent, updatedImportPath } = handleMovingFileImportsUpdate({
+        importPath: importInfo.importPath,
+        originalMovedFilePath: oldPath,
+        newMovedFilePath: newPath,
         fileContent: updatedContent,
-        manyToOne: false,
-      })
+      });
       if (updated) {
         updatedContent = updatedFileContent;
         hasChanges = true;
@@ -301,7 +301,6 @@ export async function updateImportsInMovedFile(
       //   hasChanges = true;
       //   needsManualResolution = true;
       // }
-
     }
 
     if (hasChanges) {
