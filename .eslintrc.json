@@ -14,8 +14,8 @@
     "es2022": true
   },
   "rules": {
-    "max-len": ["warning", { 
-      "code": 100, 
+    "max-len": ["warn", { 
+      "code": 120, 
       "ignoreUrls": true, 
       "ignoreStrings": true, 
       "ignoreTemplateLiterals": true,
