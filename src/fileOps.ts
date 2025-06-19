@@ -4,6 +4,7 @@ import { ImportInfo, Config } from "./types.js";
 import { parse } from "@babel/parser";
 import traverseModule, { NodePath } from "@babel/traverse";
 import {
+  checkIfFileIsPartOfMove,
   extractImportInfo,
   handleMovingFileImportsUpdate,
   handlePackageImportsUpdate,
@@ -11,7 +12,7 @@ import {
   isRelativeImport,
 } from "./importUtils.js";
 import { CallExpression, ImportDeclaration } from "@babel/types";
-import path from "path";
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
@@ -20,6 +21,28 @@ export async function movePhysicalFile(oldPath: string, newPath: string): Promis
   console.log(`📦 Moving file: ${oldPath} → ${newPath}`);
   await fs.rename(oldPath, newPath);
 }
+
+const readFileWithValidation = async (filePath: string): Promise<string> => {
+  let currentFilePath = filePath;
+  try {
+
+    if(checkIfFileIsPartOfMove(currentFilePath)){
+      const latestPath = globalThis.appState.fileMoveMap.get(currentFilePath);
+      if(latestPath){
+        currentFilePath = latestPath;
+      }
+    }
+
+    await fs.access(currentFilePath);
+
+
+  } catch (accessError) {
+    console.error(`❌ File not found: ${filePath}`);
+    console.error(`   This might indicate a race condition or path resolution issue.`);
+    throw accessError;
+  }
+  return await fs.readFile(currentFilePath, "utf8");
+};
 
 export async function updateImportsInFile({
   currentFilePath,
@@ -32,7 +55,7 @@ export async function updateImportsInFile({
   config: Config;
 }): Promise<boolean> {
   try {
-    let fileContent = await fs.readFile(currentFilePath, "utf8");
+    let fileContent = await readFileWithValidation(currentFilePath);
 
     let hasChanges = false;
     for (const importInfo of imports) {
@@ -141,6 +164,7 @@ function handleWithinModuleImports(
 export async function updateImportsInMovedFile(oldPath: string, newPath: string): Promise<void> {
   try {
     console.log(`📝 Updating imports inside moved file: ${newPath}`);
+    // this should always be the latest path
     const content = await fs.readFile(newPath, "utf8");
     let updatedContent = content;
     let hasChanges = false;

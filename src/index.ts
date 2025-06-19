@@ -149,7 +149,10 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
   }
 
   // Find all files that might contain imports (do this once for all moves)
-  const sourceFiles = await findSourceFiles();
+  let sourceFiles = await findSourceFiles();
+  // filter out files that are part of the move
+  sourceFiles = sourceFiles.filter((file) => !globalThis.appState.fileMoveMap.has(file));
+  
   console.log(`📁 Found ${sourceFiles.length} source files to check`);
   const deadFiles: string[] = [];
 
@@ -179,6 +182,8 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
 
       await movePhysicalFile(fromPath, toPath);
 
+      // TODO: If we want to let the user know files are dead, we have to return update infor of 
+      // the moved files 
       await updateImportsInMovedFile(fromPath, toPath);
 
       // Update all imports in other files
@@ -196,7 +201,7 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       if (updatedFiles > 0) {
         console.log(`✅ Successfully moved file and updated ${updatedFiles} files`);
       } else {
-        console.log(`⚠️  No file usage found in other files.`);
+        console.log(`⚠️  This file might not have any usage. Double check if needed`);
         deadFiles.push(fromPath);
       }
     } catch (error) {
@@ -211,10 +216,8 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
 
   console.log(`\n🎉 Batch move completed! Processed ${normalizedMoves.length} files.`);
   if (deadFiles.length > 0) {
-    console.log(`⚠️  Found ${deadFiles.length} files that were moved but not used in any other files:`);
+    console.log(`⚠️  Found ${deadFiles.length} files that may or may not have any usage:`);
     deadFiles.forEach((file) => console.log(`  - ${file}`));
-
-    console.log(`Consider removing these files if they are no longer needed.`);
   }
 }
 
