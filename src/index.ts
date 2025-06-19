@@ -2,43 +2,43 @@
 
 import { promises as fs } from "fs";
 import path from "path";
-import { pathToFileURL } from "url";
 import fg from "fast-glob";
 
 // Helpers, types, and config
 import { ImportAnalysis, Config } from "./types";
-import {
-  generateImportPathVariations,
-  findDependencyImports,
-  fileMoveDirection,
-} from "./importUtils";
-import {
-  movePhysicalFile,
-  updateImportsInFile,
-  updateImportsInMovedFile,
-} from "./fileOps";
+import { generateImportPathVariations, findDependencyImports } from "./importUtils";
+import { movePhysicalFile, updateImportsInFile, updateImportsInMovedFile } from "./fileOps";
+import { removeExtension } from "./pathUtils";
 
 // Types
 interface TempArguments {
   cwd: string;
 }
 
-// Session state to track information during this run, such as all before/after file move paths
-const SESSION_STATE = {
-  fileMoves: [] as [fromPath: string, toPath: string][]
+// App state to track information during this run, such as all before/after file move paths
+interface AppState {
+  fileMoves: [fromPath: string, toPath: string][];
+  fileMoveMap: Map<string, string>;
+  verbose: boolean;
+  dryRun: boolean;
+}
+
+declare global {
+  var appState: AppState;
+}
+
+globalThis.appState = {
+  fileMoves: [],
+  fileMoveMap: new Map(),
+  verbose: process.argv.includes("--verbose"),
+  dryRun: process.argv.includes("--dry-run"),
 };
 
 const TEMP_ARGUMENTS: TempArguments = {
-  cwd: path.normalize(
-    "C:/Users/jamescheung/Desktop/Work/project/power-platform-ux"
-  ),
+  cwd: path.normalize("C:/Users/jamescheung/Desktop/Work/project/power-platform-ux"),
 };
 
-const INCLUDED_PACKAGE_FOLDERS = [
-  "powerva-main",
-  "powerva-embedded-experiences",
-  "powerva-core",
-];
+const INCLUDED_PACKAGE_FOLDERS = ["powerva-main", "powerva-embedded-experiences", "powerva-core"];
 
 const INCLUDED_APPS_FOLDERS = ["powerva-microsoft-com"];
 
@@ -70,17 +70,12 @@ const CONFIG: Config = {
   includedPackageFolders: INCLUDED_PACKAGE_FOLDERS,
   includedAppsFolders: INCLUDED_APPS_FOLDERS,
   includePatterns: INCLUDE_PATTERNS,
-  dryRun: process.argv.includes("--dry-run"),
-  verbose: process.argv.includes("--verbose"),
 };
 
 /**
  * Recursively get all files in a directory and their corresponding target paths
  */
-async function getDirectoryMoves(
-  sourceDir: string,
-  targetDir: string
-): Promise<Array<[string, string]>> {
+async function getDirectoryMoves(sourceDir: string, targetDir: string): Promise<Array<[string, string]>> {
   const moves: Array<[string, string]> = [];
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
@@ -104,13 +99,14 @@ async function getDirectoryMoves(
 /**
  * Main function to move multiple files and update all imports
  */
-async function moveFileAndUpdateImports(
-  moves: Array<[fromPath: string, toPath: string]>
-): Promise<void> {
-
-  SESSION_STATE.fileMoves = moves.map(([fromPath, toPath]) => [
-    path.normalize(fromPath),
-    path.normalize(toPath),
+async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: string]>): Promise<void> {
+  globalThis.appState.fileMoves = moves.map(([fromPath, toPath]) => [path.normalize(fromPath), path.normalize(toPath)]);
+  globalThis.appState.fileMoveMap = new Map([
+    ...globalThis.appState.fileMoves,
+    ...globalThis.appState.fileMoves.map<[string, string]>((entry) => [
+      removeExtension(entry[0]),
+      removeExtension(entry[1]),
+    ]),
   ]);
 
   // Expand directory moves into individual file moves
@@ -160,24 +156,19 @@ async function moveFileAndUpdateImports(
   // Process each move
   for (let i = 0; i < normalizedMoves.length; i++) {
     const [fromPath, toPath] = normalizedMoves[i];
-    console.log(
-      `\n📦 Processing move ${i + 1}/${normalizedMoves.length
-      }: ${fromPath} → ${toPath}`
-    );
+    console.log(`\n📦 Processing move ${i + 1}/${normalizedMoves.length}: ${fromPath} → ${toPath}`);
 
     try {
       // Analyze current imports before moving
       const importAnalysis = await analyzeImports(sourceFiles, fromPath);
-      console.log(
-        `🔍 Found ${importAnalysis.length} files importing this module`
-      );
+      console.log(`🔍 Found ${importAnalysis.length} files importing this module`);
 
-      if (CONFIG.dryRun) {
+      if (globalThis.appState.dryRun) {
         console.log("🔍 DRY RUN MODE - No changes will be made for this file");
         console.log("Files that would be updated:");
         importAnalysis.forEach(({ file, imports }) => {
           console.log(`  ${file}: ${imports.length} import(s)`);
-          if (CONFIG.verbose) {
+          if (globalThis.appState.verbose) {
             imports.forEach((imp) => {
               console.log(`    Line ${imp.line}: ${imp.originalLine}`);
             });
@@ -188,7 +179,7 @@ async function moveFileAndUpdateImports(
 
       await movePhysicalFile(fromPath, toPath);
 
-      await updateImportsInMovedFile(fromPath, toPath, CONFIG);
+      await updateImportsInMovedFile(fromPath, toPath);
 
       // Update all imports in other files
       let updatedFiles = 0;
@@ -197,15 +188,13 @@ async function moveFileAndUpdateImports(
           currentFilePath: file,
           imports,
           newPath: toPath,
-          config: CONFIG
+          config: CONFIG,
         });
         if (updated) updatedFiles++;
       }
 
       if (updatedFiles > 0) {
-        console.log(
-          `✅ Successfully moved file and updated ${updatedFiles} files`
-        );
+        console.log(`✅ Successfully moved file and updated ${updatedFiles} files`);
       } else {
         console.log(`⚠️  No file usage found in other files.`);
         deadFiles.push(fromPath);
@@ -220,13 +209,9 @@ async function moveFileAndUpdateImports(
     }
   }
 
-  console.log(
-    `\n🎉 Batch move completed! Processed ${normalizedMoves.length} files.`
-  );
+  console.log(`\n🎉 Batch move completed! Processed ${normalizedMoves.length} files.`);
   if (deadFiles.length > 0) {
-    console.log(
-      `⚠️  Found ${deadFiles.length} files that were moved but not used in any other files:`
-    );
+    console.log(`⚠️  Found ${deadFiles.length} files that were moved but not used in any other files:`);
     deadFiles.forEach((file) => console.log(`  - ${file}`));
 
     console.log(`Consider removing these files if they are no longer needed.`);
@@ -258,12 +243,7 @@ async function validateInputs(oldPath: string, newPath: string): Promise<void> {
     }
     // Allow directory to exist - we'll be adding files to it
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      error.code !== "ENOENT"
-    ) {
+    if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
       throw error;
     }
   }
@@ -277,7 +257,7 @@ async function validateInputs(oldPath: string, newPath: string): Promise<void> {
  * Find all source files that might contain imports
  */
 async function findSourceFiles(): Promise<string[]> {
-  if (CONFIG.verbose) {
+  if (globalThis.appState.verbose) {
     console.log("fast-glob patterns:", CONFIG.includePatterns);
     console.log("fast-glob options:", {
       cwd: CONFIG.cwd,
@@ -302,26 +282,23 @@ async function findSourceFiles(): Promise<string[]> {
 /**
  * Analyze which files import the target file
  */
-async function analyzeImports(
-  sourceFiles: string[],
-  targetPath: string
-): Promise<ImportAnalysis[]> {
+async function analyzeImports(sourceFiles: string[], targetPath: string): Promise<ImportAnalysis[]> {
   const results: ImportAnalysis[] = [];
 
-  if (CONFIG.verbose) {
+  if (globalThis.appState.verbose) {
     console.log(`🔍 Analyzing imports for target: ${targetPath}`);
   }
 
   // Generate all possible import paths for this target
   const targetImportPaths = generateImportPathVariations(targetPath, CONFIG);
 
-  if (CONFIG.verbose) {
+  if (globalThis.appState.verbose) {
     console.log(`🎯 Target import paths to match:`, targetImportPaths);
   }
 
   for (const file of sourceFiles) {
     try {
-      if (CONFIG.verbose) {
+      if (globalThis.appState.verbose) {
         // console.log(`📂 Analyzing file: ${file}`);
       }
 
@@ -331,10 +308,9 @@ async function analyzeImports(
         content,
         targetImportPaths,
         currentFile: file,
-        config: CONFIG,
       });
 
-      if (CONFIG.verbose) {
+      if (globalThis.appState.verbose) {
         // console.log(`📂 Analyzing ${file}: ${imports.length} import(s) found`);
       }
       if (imports.length > 0) {
@@ -342,12 +318,9 @@ async function analyzeImports(
       }
     } catch (error) {
       const normalizedFile = path.normalize(file);
-      const scanningSelf = SESSION_STATE.fileMoves.some(([fromPath]) => normalizedFile === fromPath);
+      const scanningSelf = globalThis.appState.fileMoves.some(([fromPath]) => normalizedFile === fromPath);
       if (!scanningSelf) {
-        console.warn(
-          `⚠️  Could not read ${file}: ${error instanceof Error ? error.message : String(error)
-          }`
-        );
+        console.warn(`⚠️  Could not read ${file}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }
@@ -409,23 +382,15 @@ async function main() {
           !Array.isArray(moves) ||
           !moves.every(
             (move) =>
-              Array.isArray(move) &&
-              move.length === 2 &&
-              typeof move[0] === "string" &&
-              typeof move[1] === "string"
+              Array.isArray(move) && move.length === 2 && typeof move[0] === "string" && typeof move[1] === "string"
           )
         ) {
-          throw new Error(
-            "JSON file must contain an array of [fromPath, toPath] tuples"
-          );
+          throw new Error("JSON file must contain an array of [fromPath, toPath] tuples");
         }
 
         await moveFileAndUpdateImports(moves);
       } catch (error) {
-        console.error(
-          "❌ Error loading JSON file:",
-          error instanceof Error ? error.message : String(error)
-        );
+        console.error("❌ Error loading JSON file:", error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     } else {
@@ -441,7 +406,6 @@ async function main() {
       await moveFileAndUpdateImports([[oldPath, newPath]]);
     }
     process.exit(0);
-
   } catch (error) {
     console.error("❌ Error:", error instanceof Error ? error.message : String(error));
     process.exit(1);
@@ -449,10 +413,9 @@ async function main() {
 }
 
 // Run the main function if this file is being executed directly
-if (process.argv[1]?.includes('file-mover') || process.argv[0]?.includes('node')) {
+if (process.argv[1]?.includes("file-mover") || process.argv[0]?.includes("node")) {
   main().catch((error) => {
     console.error("❌ Error:", error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }
-

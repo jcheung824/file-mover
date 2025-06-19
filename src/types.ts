@@ -18,8 +18,6 @@ export interface Config {
   excludePatterns: string[];
   includePatterns: string[];
   cwd: string;
-  dryRun: boolean;
-  verbose: boolean;
 }
 
 export type FileDirection = "self" | "betweenPackages" | "packageToApp" | "unknown";

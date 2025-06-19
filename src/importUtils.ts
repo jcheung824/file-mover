@@ -77,9 +77,8 @@ export const findDependencyImports = (arg: {
   content: string;
   targetImportPaths: string[];
   currentFile: string;
-  config: Config;
 }): ImportInfo[] => {
-  const { content, targetImportPaths, currentFile, config } = arg;
+  const { content, targetImportPaths, currentFile } = arg;
   const imports: ImportInfo[] = [];
   let ast;
   try {
@@ -88,7 +87,7 @@ export const findDependencyImports = (arg: {
       plugins: ["typescript", "jsx", "decorators-legacy", "classProperties", "dynamicImport"],
     });
   } catch (e) {
-    if (config.verbose) {
+    if (globalThis.appState.verbose) {
       console.warn(`⚠️  Could not parse ${currentFile}: ${e instanceof Error ? e.message : String(e)}`);
     }
     return imports;
@@ -289,14 +288,6 @@ export const handleMovingFileImportsUpdate = ({
   let updatedImportPath: string = "";
   let updated: boolean = false;
   let newRelativePath = getRelativeImportPath(newMovedFilePath, importFilePath);
-
-  // log all relative path info
-
-  console.log("newRelativePath", newRelativePath);
-  console.log("newMovedFilePath", newMovedFilePath);
-  console.log("importFilePath", importFilePath);
-  console.log("originalMovedFilePath", originalMovedFilePath);
-  console.log("fileDirection", fileDirection);
 
   // Avoid bare import
   if (!newRelativePath.startsWith("../") && !newRelativePath.startsWith("./")) {
