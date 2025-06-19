@@ -32,5 +32,3 @@ coverage/
 # Temporary files
 tmp/
 temp/ 
-example-cases/
-tester.js

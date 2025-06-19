@@ -17,7 +17,7 @@
     "test-move": "node ./dist/index.js --dry-run",
     "build": "tsc",
     "postbuild": "node scripts/fix-extensions.js",
-    "start": "npm run build && node --max-old-space-size=16000 ./dist/index.js example.json",
+    "start": "npm run build && node --max-old-space-size=16000 ./dist/index.js ./temp/example.json",
     "watch": "tsc --watch --project tsconfig.json",
     "startv": "npm run build && node --max-old-space-size=16000 ./dist/index.js --verbose",
     "prepublishOnly": "npm run build",
