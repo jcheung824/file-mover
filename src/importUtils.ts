@@ -60,18 +60,49 @@ export const extractImportInfo = (pathNode: NodePath, content: string, importPat
 
 export const generateImportPathVariations = (targetPath: string, config: Config): string[] => {
   const normalized = path.resolve(targetPath);
-  const withoutExt = removeExtension(normalized);
   const paths = new Set<string>();
-  paths.add(normalizePath(normalized));
-  paths.add(normalizePath(withoutExt));
+  
+  // Check if this is an index file
+  const fileName = path.basename(normalized);
+  const fileNameWithoutExt = path.basename(normalized, path.extname(normalized));
+  const isIndexFile = fileName === "index.ts" || fileName === "index.tsx" || fileName === "index.js" || fileName === "index.jsx" || fileNameWithoutExt === "index";
+  
+  // Helper function to add path variations (with and without extension)
+  const addPathVariations = (basePath: string) => {
+    const withoutExt = removeExtension(basePath);
+    paths.add(normalizePath(basePath));
+    paths.add(normalizePath(withoutExt));
+    
+    // Add directory variations if this is an index file
+    if (isIndexFile) {
+      const dirPath = path.dirname(basePath);
+      const dirPathWithoutExt = removeExtension(dirPath);
+      paths.add(normalizePath(dirPath));
+      paths.add(normalizePath(dirPathWithoutExt));
+    }
+  };
+  
+  // Add variations for absolute path
+  addPathVariations(normalized);
+  
+  // Handle MS import path
   const msImportPath = getMsImportPath(normalized);
   if (msImportPath) {
     paths.add(msImportPath);
+    
+    // Add directory-based MS import path variations
+    if (isIndexFile) {
+      const msDirPath = msImportPath.replace(/\/index$/, "");
+      if (msDirPath !== msImportPath) {
+        paths.add(msDirPath);
+      }
+    }
   }
+  
+  // Add variations for relative to CWD path
   const relativeToCwd = path.relative(config.cwd, normalized);
-  const relativeToCwdWithoutExt = removeExtension(relativeToCwd);
-  paths.add(normalizePath(relativeToCwd));
-  paths.add(normalizePath(relativeToCwdWithoutExt));
+  addPathVariations(relativeToCwd);
+  
   return Array.from(paths);
 };
 
