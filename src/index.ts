@@ -100,14 +100,6 @@ async function getDirectoryMoves(sourceDir: string, targetDir: string): Promise<
  * Main function to move multiple files and update all imports
  */
 async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: string]>): Promise<void> {
-  globalThis.appState.fileMoves = moves.map(([fromPath, toPath]) => [path.normalize(fromPath), path.normalize(toPath)]);
-  globalThis.appState.fileMoveMap = new Map([
-    ...globalThis.appState.fileMoves,
-    ...globalThis.appState.fileMoves.map<[string, string]>((entry) => [
-      removeExtension(entry[0]),
-      removeExtension(entry[1]),
-    ]),
-  ]);
 
   // Expand directory moves into individual file moves
   const expandedMoves: Array<[string, string]> = [];
@@ -127,6 +119,17 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       process.exit(1);
     }
   }
+
+  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [path.normalize(fromPath), path.normalize(toPath)]);
+  globalThis.appState.fileMoveMap = new Map([
+    ...globalThis.appState.fileMoves,
+    ...globalThis.appState.fileMoves.map<[string, string]>((entry) => [
+      removeExtension(entry[0]),
+      removeExtension(entry[1]),
+    ]),
+  ]);
+
+  
 
   console.log(`🚀 Starting batch move of ${expandedMoves.length} files`);
 
