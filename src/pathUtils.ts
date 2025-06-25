@@ -32,7 +32,7 @@ export function resolveImportPath(currentFile: string, importPath: string): stri
     const currentDir = path.dirname(currentFile);
     return path.resolve(currentDir, importPath);
   }
-  return importPath;
+  return normalizePath(importPath);
 }
 
 /**
@@ -100,5 +100,5 @@ export const handleMonoRepoImportPathToAbsolutePath = (directory: string, import
   // Build absolute path: packages/packageName/srcPath
   const packagesDir = currentDir.substring(0, packagesIndex + "packages".length);
 
-  return path.normalize(path.join(packagesDir, packageName, srcPath));
+  return normalizePath(path.join(packagesDir, packageName, srcPath));
 };

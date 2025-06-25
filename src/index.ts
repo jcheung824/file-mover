@@ -8,7 +8,7 @@ import fg from "fast-glob";
 import { ImportAnalysis, Config } from "./types";
 import { generateImportPathVariations, findDependencyImports } from "./importUtils";
 import { movePhysicalFile, updateImportsInFile, updateImportsInMovedFile } from "./fileOps";
-import { removeExtension } from "./pathUtils";
+import { normalizePath, removeExtension } from "./pathUtils";
 
 // Types
 interface TempArguments {
@@ -120,28 +120,34 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
     }
   }
 
-  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [path.normalize(fromPath), path.normalize(toPath)]);
+  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [fromPath, toPath]);
+
+  const filesWithoutExtension = globalThis.appState.fileMoves.map<[string, string]>((entry) => [
+    removeExtension(entry[0]),
+    removeExtension(entry[1]),
+  ])
+  const indexFiles = filesWithoutExtension.filter((entry) => entry[0].endsWith("index")).map<[string, string]>((entry) => [
+    path.dirname(entry[0]),
+    entry[1],
+  ]);
   globalThis.appState.fileMoveMap = new Map([
     ...globalThis.appState.fileMoves,
-    ...globalThis.appState.fileMoves.map<[string, string]>((entry) => [
-      removeExtension(entry[0]),
-      removeExtension(entry[1]),
-    ]),
+    ...filesWithoutExtension,
+    ...indexFiles,
   ]);
 
-  
 
   console.log(`🚀 Starting batch move of ${expandedMoves.length} files`);
 
   // Normalize all paths in moves
-  const normalizedMoves: Array<[string, string]> = expandedMoves.map(([from, to]) => [
+  const resolvedMoves: Array<[string, string]> = globalThis.appState.fileMoves.map(([from, to]) => [
     path.resolve(CONFIG.cwd, from),
     path.resolve(CONFIG.cwd, to),
   ]);
 
   // Validate all moves first
   console.log("🔍 Validating all moves...");
-  for (const [fromPath, toPath] of normalizedMoves) {
+  for (const [fromPath, toPath] of resolvedMoves) {
     try {
       await validateInputs(fromPath, toPath);
     } catch (error) {
@@ -155,14 +161,14 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
   let sourceFiles = await findSourceFiles();
   // filter out files that are part of the move
   sourceFiles = sourceFiles.filter((file) => !globalThis.appState.fileMoveMap.has(file));
-  
+
   console.log(`📁 Found ${sourceFiles.length} source files to check`);
   const deadFiles: string[] = [];
 
   // Process each move
-  for (let i = 0; i < normalizedMoves.length; i++) {
-    const [fromPath, toPath] = normalizedMoves[i];
-    console.log(`\n📦 Processing move ${i + 1}/${normalizedMoves.length}: ${fromPath} → ${toPath}`);
+  for (let i = 0; i < resolvedMoves.length; i++) {
+    const [fromPath, toPath] = resolvedMoves[i];
+    console.log(`\n📦 Processing move ${i + 1}/${resolvedMoves.length}: ${fromPath} → ${toPath}`);
 
     try {
       // Analyze current imports before moving
@@ -217,7 +223,7 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
     }
   }
 
-  console.log(`\n🎉 Batch move completed! Processed ${normalizedMoves.length} files.`);
+  console.log(`\n🎉 Batch move completed! Processed ${resolvedMoves.length} files.`);
   if (deadFiles.length > 0) {
     console.log(`⚠️  Found ${deadFiles.length} files that may or may not have any usage:`);
     deadFiles.forEach((file) => console.log(`  - ${file}`));
@@ -323,7 +329,7 @@ async function analyzeImports(sourceFiles: string[], targetPath: string): Promis
         results.push({ file, imports });
       }
     } catch (error) {
-      const normalizedFile = path.normalize(file);
+      const normalizedFile = normalizePath(file);
       const scanningSelf = globalThis.appState.fileMoves.some(([fromPath]) => normalizedFile === fromPath);
       if (!scanningSelf) {
         console.warn(`⚠️  Could not read ${file}: ${error instanceof Error ? error.message : String(error)}`);

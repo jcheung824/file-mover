@@ -196,13 +196,13 @@ export const matchesTarget = ({
   }
 
   const resolvedPath = resolveImportPath(currentFile, importPath);
-  const resolvedPathWithoutExt = removeExtension(resolvedPath);
+  const resolvedPathWithoutExt = normalizePath(removeExtension(resolvedPath));
   return targetImportPaths.some(
     (targetPath) =>
-      normalizePath(resolvedPath) === targetPath ||
-      normalizePath(resolvedPathWithoutExt) === targetPath ||
-      normalizePath(resolvedPath) === removeExtension(targetPath) ||
-      normalizePath(resolvedPathWithoutExt) === removeExtension(targetPath)
+      resolvedPath === targetPath ||
+      resolvedPathWithoutExt === targetPath ||
+      resolvedPath === removeExtension(targetPath) ||
+      resolvedPathWithoutExt === removeExtension(targetPath)
   );
 };
 

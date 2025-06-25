@@ -73,62 +73,6 @@ export async function updateImportsInFile({
         fileContent = updatedFileContent;
       }
 
-      // if (fileDirection === "self") {
-      //   if (currentImportPath.startsWith("@ms/")) {
-      //     updatedImportPath = newMsPath || newRelativePath;
-      //   } else if (currentImportPath.startsWith("./") || currentImportPath.startsWith("../")) {
-      //     updatedImportPath = newRelativePath;
-      //   } else {
-      //     updatedImportPath = newRelativePath;
-      //   }
-      //   const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      //   const quotedPattern = new RegExp(`(['"\`])${escapeRegex(currentImportPath)}\\1`, "g");
-      //   const unquotedPattern = new RegExp(`\\b${escapeRegex(currentImportPath)}\\b`, "g");
-      //   if (quotedPattern.test(fileContent)) {
-      //     fileContent = fileContent.replace(quotedPattern, `$1${updatedImportPath}$1`);
-      //     hasChanges = true;
-      //   } else if (unquotedPattern.test(fileContent)) {
-      //     fileContent = fileContent.replace(unquotedPattern, updatedImportPath);
-      //     hasChanges = true;
-      //   }
-      // } else if (fileDirection === "betweenPackages") {
-      //   // Match only the file name part of the path
-      //   const fileName = path.basename(newRelativePath);
-      //   const matchDirectFilePath = new RegExp(`(['"])[^'"]*${fileName}\\1`, "g");
-      //   const matchedDirectFilePath = fileContent.match(matchDirectFilePath);
-      //   if (matchedDirectFilePath) {
-      //     fileContent = fileContent.replace(matchDirectFilePath, `$1${newMsPath}$1`);
-      //     hasChanges = true;
-      //     if (config.verbose) {
-      //       console.log(`  📝 ${currentFilePath}: ${newRelativePath} → ${newMsPath}`);
-      //     }
-      //   }
-
-      //   if (currentImportPath.startsWith("@ms/")) {
-      //     // Convert @ms/package/lib/path to relative path to src
-      //     const srcPath = currentImportPath.replace("@ms/", "packages/").replace("/lib/", "/src/");
-      //     const relativePath = normalizePath(path.relative(fileDir, srcPath));
-      //     const relativePathWithoutExt = removeExtension(relativePath);
-
-      //     // Ensure path starts with ./ or ../
-      //     updatedImportPath = relativePathWithoutExt;
-      //     if (!updatedImportPath.startsWith("../") && !updatedImportPath.startsWith("./")) {
-      //       updatedImportPath = `./${updatedImportPath}`;
-      //     }
-
-      //     // Update the import in the file content
-      //     const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      //     const quotedPattern = new RegExp(`(['"\`])${escapeRegex(currentImportPath)}\\1`, "g");
-      //     if (quotedPattern.test(fileContent)) {
-      //       fileContent = fileContent.replace(quotedPattern, `$1${updatedImportPath}$1`);
-      //       hasChanges = true;
-      //       if (config.verbose) {
-      //         console.log(`  📝 ${currentFilePath}: ${currentImportPath} → ${updatedImportPath}`);
-      //       }
-      //     }
-      //   }
-      // }
-
       if (globalThis.appState.verbose && hasChanges) {
         console.log(`  📝 ${currentFilePath}: ${currentImportPath} → ${updatedImportPath}`);
       }
@@ -233,13 +177,6 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
         }
       }
 
-      // Add attention needed imports comment to the file
-      // if (attentionNeededImports.length > 0) {
-      //   const attentionComment = `\n\n/*\n * ATTENTION NEEDED: The following imports require manual resolution:\n${attentionNeededImports.map((imp) => ` * ${imp.originalLine}`).join("\n")}\n */\n`;
-      //   updatedContent += attentionComment;
-      //   hasChanges = true;
-      //   needsManualResolution = true;
-      // }
     }
 
     if (hasChanges) {
