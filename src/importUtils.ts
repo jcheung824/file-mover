@@ -12,6 +12,7 @@ import { parse } from "@babel/parser";
 import traverseModule, { NodePath } from "@babel/traverse";
 import { CallExpression, ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration } from "@babel/types";
 import path from "path";
+import { trackCacheHit, trackCacheLookup } from "./performance.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse = (traverseModule as any).default || traverseModule;
@@ -106,6 +107,15 @@ export const generateImportPathVariations = (targetPath: string, config: Config)
   return Array.from(paths);
 };
 
+// Cache for parsed ASTs to avoid re-parsing the same files
+const astCache = new Map<string, any>();
+
+// Make cache globally accessible for metrics
+declare global {
+  var astCache: Map<string, any>;
+}
+globalThis.astCache = astCache;
+
 export const findDependencyImports = (arg: {
   content: string;
   targetImportPaths: string[];
@@ -113,35 +123,55 @@ export const findDependencyImports = (arg: {
 }): ImportInfo[] => {
   const { content, targetImportPaths, currentFile } = arg;
   const imports: ImportInfo[] = [];
-  let ast;
-  try {
-    ast = parse(content, {
-      sourceType: "unambiguous",
-      plugins: ["typescript", "jsx", "decorators-legacy", "classProperties", "dynamicImport"],
-    });
-  } catch (e) {
-    if (globalThis.appState.verbose) {
-      console.warn(`⚠️  Could not parse ${currentFile}: ${e instanceof Error ? e.message : String(e)}`);
+  
+  // OPTIMIZATION: Check if we have a cached AST for this file
+  let ast = astCache.get(currentFile);
+  
+  // Track cache performance
+  trackCacheLookup();
+  
+  if (!ast) {
+    try {
+      ast = parse(content, {
+        sourceType: "unambiguous",
+        plugins: ["typescript", "jsx", "decorators-legacy", "classProperties", "dynamicImport"],
+      });
+      // Cache the AST for potential reuse
+      astCache.set(currentFile, ast);
+    } catch (e) {
+      if (globalThis.appState.verbose) {
+        console.warn(`⚠️  Could not parse ${currentFile}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return imports;
     }
-    return imports;
+  } else {
+    // Cache hit
+    trackCacheHit('ast');
   }
+  
+  // OPTIMIZATION: Use a more efficient traversal that stops early if no matches found
+  let hasMatches = false;
+  
   traverse(ast, {
     ImportDeclaration: (pathNode: NodePath<ImportDeclaration>) => {
       const importPath = pathNode.node.source?.value;
       if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
+        hasMatches = true;
       }
     },
     ExportAllDeclaration: (pathNode: NodePath<ExportAllDeclaration>) => {
       const importPath = pathNode.node.source?.value;
       if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
+        hasMatches = true;
       }
     },
     ExportNamedDeclaration: (pathNode: NodePath<ExportNamedDeclaration>) => {
       const importPath = pathNode.node.source?.value;
       if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
+        hasMatches = true;
       }
     },
     CallExpression: (pathNode: NodePath<CallExpression>) => {
@@ -152,11 +182,13 @@ export const findDependencyImports = (arg: {
           const importPath = arg0.value;
           if (matchesTarget({ importPath, targetImportPaths, currentFile })) {
             imports.push(extractImportInfo(pathNode, content, importPath));
+            hasMatches = true;
           }
         }
       }
     },
   });
+  
   return imports;
 };
 

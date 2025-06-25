@@ -12,14 +12,30 @@ import {
   isRelativeImport,
 } from "./importUtils.js";
 import { CallExpression, ImportDeclaration } from "@babel/types";
-
+import { trackCacheHit, trackCacheLookup } from "./performance.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
 
+// OPTIMIZATION: Cache file contents to avoid redundant reads
+const fileContentCache = new Map<string, string>();
+
+// Make cache globally accessible for metrics
+declare global {
+  var fileContentCache: Map<string, string>;
+}
+globalThis.fileContentCache = fileContentCache;
+
 export async function movePhysicalFile(oldPath: string, newPath: string): Promise<void> {
   console.log(`📦 Moving file: ${oldPath} → ${newPath}`);
   await fs.rename(oldPath, newPath);
+  
+  // Update cache with new path
+  const content = fileContentCache.get(oldPath);
+  if (content) {
+    fileContentCache.set(newPath, content);
+    fileContentCache.delete(oldPath);
+  }
 }
 
 const readFileWithValidation = async (filePath: string): Promise<string> => {
@@ -35,13 +51,26 @@ const readFileWithValidation = async (filePath: string): Promise<string> => {
 
     await fs.access(currentFilePath);
 
-
   } catch (accessError) {
     console.error(`❌ File not found: ${filePath}`);
     console.error(`   This might indicate a race condition or path resolution issue.`);
     throw accessError;
   }
-  return await fs.readFile(currentFilePath, "utf8");
+  
+  // OPTIMIZATION: Check cache first
+  const cachedContent = fileContentCache.get(currentFilePath);
+  
+  // Track cache performance
+  trackCacheLookup();
+  
+  if (cachedContent) {
+    trackCacheHit('file');
+    return cachedContent;
+  }
+  
+  const content = await fs.readFile(currentFilePath, "utf8");
+  fileContentCache.set(currentFilePath, content);
+  return content;
 };
 
 export async function updateImportsInFile({
@@ -73,62 +102,6 @@ export async function updateImportsInFile({
         fileContent = updatedFileContent;
       }
 
-      // if (fileDirection === "self") {
-      //   if (currentImportPath.startsWith("@ms/")) {
-      //     updatedImportPath = newMsPath || newRelativePath;
-      //   } else if (currentImportPath.startsWith("./") || currentImportPath.startsWith("../")) {
-      //     updatedImportPath = newRelativePath;
-      //   } else {
-      //     updatedImportPath = newRelativePath;
-      //   }
-      //   const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      //   const quotedPattern = new RegExp(`(['"\`])${escapeRegex(currentImportPath)}\\1`, "g");
-      //   const unquotedPattern = new RegExp(`\\b${escapeRegex(currentImportPath)}\\b`, "g");
-      //   if (quotedPattern.test(fileContent)) {
-      //     fileContent = fileContent.replace(quotedPattern, `$1${updatedImportPath}$1`);
-      //     hasChanges = true;
-      //   } else if (unquotedPattern.test(fileContent)) {
-      //     fileContent = fileContent.replace(unquotedPattern, updatedImportPath);
-      //     hasChanges = true;
-      //   }
-      // } else if (fileDirection === "betweenPackages") {
-      //   // Match only the file name part of the path
-      //   const fileName = path.basename(newRelativePath);
-      //   const matchDirectFilePath = new RegExp(`(['"])[^'"]*${fileName}\\1`, "g");
-      //   const matchedDirectFilePath = fileContent.match(matchDirectFilePath);
-      //   if (matchedDirectFilePath) {
-      //     fileContent = fileContent.replace(matchDirectFilePath, `$1${newMsPath}$1`);
-      //     hasChanges = true;
-      //     if (config.verbose) {
-      //       console.log(`  📝 ${currentFilePath}: ${newRelativePath} → ${newMsPath}`);
-      //     }
-      //   }
-
-      //   if (currentImportPath.startsWith("@ms/")) {
-      //     // Convert @ms/package/lib/path to relative path to src
-      //     const srcPath = currentImportPath.replace("@ms/", "packages/").replace("/lib/", "/src/");
-      //     const relativePath = normalizePath(path.relative(fileDir, srcPath));
-      //     const relativePathWithoutExt = removeExtension(relativePath);
-
-      //     // Ensure path starts with ./ or ../
-      //     updatedImportPath = relativePathWithoutExt;
-      //     if (!updatedImportPath.startsWith("../") && !updatedImportPath.startsWith("./")) {
-      //       updatedImportPath = `./${updatedImportPath}`;
-      //     }
-
-      //     // Update the import in the file content
-      //     const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      //     const quotedPattern = new RegExp(`(['"\`])${escapeRegex(currentImportPath)}\\1`, "g");
-      //     if (quotedPattern.test(fileContent)) {
-      //       fileContent = fileContent.replace(quotedPattern, `$1${updatedImportPath}$1`);
-      //       hasChanges = true;
-      //       if (config.verbose) {
-      //         console.log(`  📝 ${currentFilePath}: ${currentImportPath} → ${updatedImportPath}`);
-      //       }
-      //     }
-      //   }
-      // }
-
       if (globalThis.appState.verbose && hasChanges) {
         console.log(`  📝 ${currentFilePath}: ${currentImportPath} → ${updatedImportPath}`);
       }
@@ -136,6 +109,8 @@ export async function updateImportsInFile({
 
     if (hasChanges) {
       await fs.writeFile(currentFilePath, fileContent, "utf8");
+      // Update cache with new content
+      fileContentCache.set(currentFilePath, fileContent);
       return true;
     }
     return false;
