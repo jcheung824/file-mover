@@ -100,7 +100,6 @@ async function getDirectoryMoves(sourceDir: string, targetDir: string): Promise<
  * Main function to move multiple files and update all imports
  */
 async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: string]>): Promise<void> {
-
   // Expand directory moves into individual file moves
   const expandedMoves: Array<[string, string]> = [];
   for (const [fromPath, toPath] of moves) {
@@ -120,7 +119,10 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
     }
   }
 
-  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [path.normalize(fromPath), path.normalize(toPath)]);
+  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [
+    path.normalize(fromPath),
+    path.normalize(toPath),
+  ]);
   globalThis.appState.fileMoveMap = new Map([
     ...globalThis.appState.fileMoves,
     ...globalThis.appState.fileMoves.map<[string, string]>((entry) => [
@@ -128,8 +130,6 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       removeExtension(entry[1]),
     ]),
   ]);
-
-  
 
   console.log(`🚀 Starting batch move of ${expandedMoves.length} files`);
 
@@ -155,7 +155,7 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
   let sourceFiles = await findSourceFiles();
   // filter out files that are part of the move
   sourceFiles = sourceFiles.filter((file) => !globalThis.appState.fileMoveMap.has(file));
-  
+
   console.log(`📁 Found ${sourceFiles.length} source files to check`);
   const deadFiles: string[] = [];
 
@@ -185,8 +185,8 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
 
       await movePhysicalFile(fromPath, toPath);
 
-      // TODO: If we want to let the user know files are dead, we have to return update infor of 
-      // the moved files 
+      // TODO: If we want to let the user know files are dead, we have to return update infor of
+      // the moved files
       await updateImportsInMovedFile(fromPath, toPath);
 
       // Update all imports in other files
@@ -195,7 +195,7 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
         const updated = await updateImportsInFile({
           currentFilePath: file,
           imports,
-          newPath: toPath,
+          targetFileMoveToNewPath: toPath,
           config: CONFIG,
         });
         if (updated) updatedFiles++;

@@ -1,17 +1,16 @@
 // Utility functions for path normalization and import path handling
 import path from "path";
 import { isMonorepoPackageImport, isRelativeImport } from "./importUtils";
+import { ImportPath, NormalizedFilePath } from "./types";
 
-export function normalizePath(filePath: string): string {
-  return path.normalize(filePath).replace(/\\/g, "/");
-}
+export const normalizePath = (filePath: string): string => path.normalize(filePath).replace(/\\/g, "/");
 
-export function removeExtension(filePath: string): string {
+export const removeExtension = (filePath: string): string => {
   const parsed = path.parse(filePath);
   return path.join(parsed.dir, parsed.name);
-}
+};
 
-export function getMsImportPath(filePath: string): string {
+export const getMsImportPath = (filePath: ImportPath): string => {
   const normalized = normalizePath(filePath);
   // Matches paths like "packages/package-name/src/file/path.ts" or "apps/app-name/src/file/path.ts"
   // Group 1: package-name or app-name
@@ -25,15 +24,15 @@ export function getMsImportPath(filePath: string): string {
   }
 
   throw new Error(`⚠️  getMsImportPath not found! This should be an error: ${normalized}`);
-}
+};
 
-export function resolveImportPath(currentFile: string, importPath: string): string {
+export const resolveImportPath = (currentFile: NormalizedFilePath, importPath: ImportPath): string => {
   if (isRelativeImport(importPath)) {
     const currentDir = path.dirname(currentFile);
     return path.resolve(currentDir, importPath);
   }
   return importPath;
-}
+};
 
 /**
  * @param importPath - The import path to get the module type for.

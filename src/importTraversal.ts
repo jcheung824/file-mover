@@ -2,9 +2,12 @@ import { promises as fs } from "fs";
 import path from "path";
 import { parse } from "@babel/parser";
 import traverseModule from "@babel/traverse";
-import { ImportInfo, Config } from "./types.js";
-import { normalizePath } from "./pathUtils.js";
+import { ImportInfo } from "./types";
+import { normalizePath } from "./pathUtils";
+import { NodePath } from "@babel/traverse";
+import { CallExpression, ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration } from "@babel/types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
 
 export interface ImportUpdateResult {
@@ -13,6 +16,7 @@ export interface ImportUpdateResult {
   imports: ImportInfo[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function parseFileContent(filePath: string): Promise<{ ast: any; content: string } | null> {
   try {
     const content = await fs.readFile(filePath, "utf8");
@@ -29,6 +33,7 @@ export async function parseFileContent(filePath: string): Promise<{ ast: any; co
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function findRelativeImports(ast: any, content: string): ImportInfo[] {
   const relativeImports: ImportInfo[] = [];
 
@@ -68,7 +73,11 @@ export function findRelativeImports(ast: any, content: string): ImportInfo[] {
   return relativeImports;
 }
 
-function createImportInfo(pathNode: any, content: string, importPath: string): ImportInfo {
+function createImportInfo(
+  pathNode: NodePath<ImportDeclaration | ExportAllDeclaration | ExportNamedDeclaration | CallExpression>,
+  content: string,
+  importPath: string
+): ImportInfo {
   return {
     line: pathNode.node.loc?.start.line || 0,
     originalLine:
@@ -82,8 +91,7 @@ export function updateImportPaths(
   content: string,
   imports: ImportInfo[],
   oldFileDir: string,
-  newFileDir: string,
-  config: Config
+  newFileDir: string
 ): ImportUpdateResult {
   let updatedContent = content;
   let hasChanges = false;

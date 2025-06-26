@@ -22,7 +22,12 @@
     "startv": "npm run build && node --max-old-space-size=16000 ./dist/index.js --verbose",
     "prepublishOnly": "npm run build",
     "lint": "eslint . --fix",
-    "lint:check": "eslint ."
+    "lint:check": "eslint .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration"
   },
   "dependencies": {
     "@babel/parser": "^7.27.5",
@@ -54,11 +59,14 @@
   "homepage": "https://github.com/jcheung824/file-mover-tool#readme",
   "devDependencies": {
     "@types/babel__traverse": "^7.20.7",
+    "@types/jest": "^29.5.12",
     "@types/node": "^22.15.30",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
     "eslint": "^8.56.0",
     "eslint-plugin-prettier": "^5.5.0",
-    "prettier": "^3.5.3"
+    "jest": "^29.7.0",
+    "prettier": "^3.5.3",
+    "ts-jest": "^29.1.2"
   }
 }
