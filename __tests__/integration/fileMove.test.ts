@@ -24,6 +24,7 @@ globalThis.appState = {
   dryRun: false,
 };
 
+// TODO: Fix this test
 describe.skip("File Move Integration Tests", () => {
   let testFS: TestFileSystem;
 
