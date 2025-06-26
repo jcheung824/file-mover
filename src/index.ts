@@ -9,6 +9,7 @@ import { ImportAnalysis, Config } from "./types";
 import { generateImportPathVariations, findDependencyImports } from "./importUtils";
 import { movePhysicalFile, updateImportsInFile, updateImportsInMovedFile } from "./fileOps";
 import { removeExtension } from "./pathUtils";
+import { getPerformanceTracker, PerformanceTracker } from "./performance";
 
 // Types
 interface TempArguments {
@@ -21,6 +22,7 @@ interface AppState {
   fileMoveMap: Map<string, string>;
   verbose: boolean;
   dryRun: boolean;
+  performanceTracker: PerformanceTracker;
 }
 
 declare global {
@@ -32,6 +34,7 @@ globalThis.appState = {
   fileMoveMap: new Map(),
   verbose: process.argv.includes("--verbose"),
   dryRun: process.argv.includes("--dry-run"),
+  performanceTracker: getPerformanceTracker(process.argv.includes("--verbose")),
 };
 
 const TEMP_ARGUMENTS: TempArguments = {
@@ -97,9 +100,34 @@ async function getDirectoryMoves(sourceDir: string, targetDir: string): Promise<
 }
 
 /**
+ * Batch update imports in multiple files to reduce I/O overhead
+ */
+async function batchUpdateImports(
+  importAnalysis: ImportAnalysis[],
+  targetFileMoveToNewPath: string,
+  config: Config
+): Promise<number> {
+  const updatePromises = importAnalysis.map(async ({ file, imports }) => {
+    const updated = await updateImportsInFile({
+      currentFilePath: file,
+      imports,
+      targetFileMoveToNewPath,
+      config,
+    });
+    return updated ? 1 : 0;
+  });
+
+  const results = await Promise.all(updatePromises);
+  return results.reduce((sum: number, count: number) => sum + count, 0);
+}
+
+/**
  * Main function to move multiple files and update all imports
  */
 async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: string]>): Promise<void> {
+  const { performanceTracker } = globalThis.appState;
+  const totalTimer = performanceTracker.start("Total execution");
+
   // Expand directory moves into individual file moves
   const expandedMoves: Array<[string, string]> = [];
   for (const [fromPath, toPath] of moves) {
@@ -140,6 +168,7 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
   ]);
 
   // Validate all moves first
+  const validationTimer = performanceTracker.start("Validation");
   console.log("🔍 Validating all moves...");
   for (const [fromPath, toPath] of normalizedMoves) {
     try {
@@ -150,23 +179,49 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       process.exit(1);
     }
   }
+  performanceTracker.metrics.validation.time = validationTimer.end();
+  performanceTracker.metrics.validation.moveCount = normalizedMoves.length;
 
   // Find all files that might contain imports (do this once for all moves)
+  const fileDiscoveryTimer = performanceTracker.start("File discovery");
   let sourceFiles = await findSourceFiles();
   // filter out files that are part of the move
   sourceFiles = sourceFiles.filter((file) => !globalThis.appState.fileMoveMap.has(file));
+  performanceTracker.metrics.fileDiscovery.time = fileDiscoveryTimer.end();
+  performanceTracker.metrics.fileDiscovery.fileCount = sourceFiles.length;
 
   console.log(`📁 Found ${sourceFiles.length} source files to check`);
   const deadFiles: string[] = [];
 
+  // OPTIMIZATION: Pre-generate import path variations for all moves to avoid repeated computation
+  const importPathCache = new Map<string, string[]>();
+  const precomputeTimer = performanceTracker.start("Pre-computing import paths");
+  for (const [fromPath] of normalizedMoves) {
+    const variations = generateImportPathVariations(fromPath, CONFIG);
+    importPathCache.set(fromPath, variations);
+  }
+  precomputeTimer.end();
+
   // Process each move
+  const fileOpsTimer = performanceTracker.start("File operations");
   for (let i = 0; i < normalizedMoves.length; i++) {
     const [fromPath, toPath] = normalizedMoves[i];
     console.log(`\n📦 Processing move ${i + 1}/${normalizedMoves.length}: ${fromPath} → ${toPath}`);
 
+    const moveMetrics = {
+      fromPath,
+      toPath,
+      analysisTime: 0,
+      moveTime: 0,
+      updateTime: 0,
+      filesUpdated: 0,
+    };
+
     try {
       // Analyze current imports before moving
-      const importAnalysis = await analyzeImports(sourceFiles, fromPath);
+      const analysisTimer = performanceTracker.start(`Import analysis for move ${i + 1}`);
+      const importAnalysis = await analyzeImports(sourceFiles, fromPath, importPathCache.get(fromPath)!);
+      moveMetrics.analysisTime = analysisTimer.end();
       console.log(`🔍 Found ${importAnalysis.length} files importing this module`);
 
       if (globalThis.appState.dryRun) {
@@ -183,23 +238,19 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
         continue;
       }
 
+      const moveTimer = performanceTracker.start(`Physical file move ${i + 1}`);
       await movePhysicalFile(fromPath, toPath);
+      moveMetrics.moveTime = moveTimer.end();
 
       // TODO: If we want to let the user know files are dead, we have to return update infor of
       // the moved files
       await updateImportsInMovedFile(fromPath, toPath);
 
-      // Update all imports in other files
-      let updatedFiles = 0;
-      for (const { file, imports } of importAnalysis) {
-        const updated = await updateImportsInFile({
-          currentFilePath: file,
-          imports,
-          targetFileMoveToNewPath: toPath,
-          config: CONFIG,
-        });
-        if (updated) updatedFiles++;
-      }
+      // OPTIMIZATION: Batch update all imports in other files
+      const updateTimer = performanceTracker.start(`Import updates for move ${i + 1}`);
+      const updatedFiles = await batchUpdateImports(importAnalysis, toPath, CONFIG);
+      moveMetrics.updateTime = updateTimer.end();
+      moveMetrics.filesUpdated = updatedFiles;
 
       if (updatedFiles > 0) {
         console.log(`✅ Successfully moved file and updated ${updatedFiles} files`);
@@ -215,13 +266,22 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       // Continue with other moves instead of exiting
       continue;
     }
+
+    performanceTracker.metrics.individualMoves.push(moveMetrics);
   }
+  performanceTracker.metrics.fileOperations.time = fileOpsTimer.end();
+  performanceTracker.metrics.fileOperations.moves = normalizedMoves.length;
+
+  performanceTracker.metrics.totalTime = totalTimer.end();
 
   console.log(`\n🎉 Batch move completed! Processed ${normalizedMoves.length} files.`);
   if (deadFiles.length > 0) {
     console.log(`⚠️  Found ${deadFiles.length} files that may or may not have any usage:`);
     deadFiles.forEach((file) => console.log(`  - ${file}`));
   }
+
+  // Print performance summary
+  performanceTracker.printSummary();
 }
 
 /**
@@ -288,21 +348,20 @@ async function findSourceFiles(): Promise<string[]> {
 /**
  * Analyze which files import the target file
  */
-async function analyzeImports(sourceFiles: string[], targetPath: string): Promise<ImportAnalysis[]> {
+async function analyzeImports(
+  sourceFiles: string[],
+  targetPath: string,
+  targetImportPaths: string[]
+): Promise<ImportAnalysis[]> {
   const results: ImportAnalysis[] = [];
 
   if (globalThis.appState.verbose) {
     console.log(`🔍 Analyzing imports for target: ${targetPath}`);
-  }
-
-  // Generate all possible import paths for this target
-  const targetImportPaths = generateImportPathVariations(targetPath, CONFIG);
-
-  if (globalThis.appState.verbose) {
     console.log(`🎯 Target import paths to match:`, targetImportPaths);
   }
 
-  for (const file of sourceFiles) {
+  // OPTIMIZATION: Use Promise.all for parallel file reading and analysis
+  const analysisPromises = sourceFiles.map(async (file) => {
     try {
       if (globalThis.appState.verbose) {
         // console.log(`📂 Analyzing file: ${file}`);
@@ -320,14 +379,25 @@ async function analyzeImports(sourceFiles: string[], targetPath: string): Promis
         // console.log(`📂 Analyzing ${file}: ${imports.length} import(s) found`);
       }
       if (imports.length > 0) {
-        results.push({ file, imports });
+        return { file, imports };
       }
+      return null;
     } catch (error) {
       const normalizedFile = path.normalize(file);
       const scanningSelf = globalThis.appState.fileMoves.some(([fromPath]) => normalizedFile === fromPath);
       if (!scanningSelf) {
         console.warn(`⚠️  Could not read ${file}: ${error instanceof Error ? error.message : String(error)}`);
       }
+      return null;
+    }
+  });
+
+  const analysisResults = await Promise.all(analysisPromises);
+
+  // Filter out null results and add to results array
+  for (const result of analysisResults) {
+    if (result) {
+      results.push(result);
     }
   }
 

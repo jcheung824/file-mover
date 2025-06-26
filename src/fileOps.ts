@@ -11,13 +11,30 @@ import {
   isRelativeImport,
 } from "./importUtils";
 import { CallExpression, ImportDeclaration } from "@babel/types";
+import { trackCacheHit, trackCacheLookup } from "./performance.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
 
+// OPTIMIZATION: Cache file contents to avoid redundant reads
+const fileContentCache = new Map<string, string>();
+
+// Make cache globally accessible for metrics
+declare global {
+  var fileContentCache: Map<string, string>;
+}
+globalThis.fileContentCache = fileContentCache;
+
 export async function movePhysicalFile(oldPath: string, newPath: string): Promise<void> {
   console.log(`📦 Moving file: ${oldPath} → ${newPath}`);
   await fs.rename(oldPath, newPath);
+
+  // Update cache with new path
+  const content = fileContentCache.get(oldPath);
+  if (content) {
+    fileContentCache.set(newPath, content);
+    fileContentCache.delete(oldPath);
+  }
 }
 
 const readFileWithValidation = async (filePath: string): Promise<string> => {
@@ -36,7 +53,21 @@ const readFileWithValidation = async (filePath: string): Promise<string> => {
     console.error(`   This might indicate a race condition or path resolution issue.`);
     throw accessError;
   }
-  return await fs.readFile(currentFilePath, "utf8");
+
+  // OPTIMIZATION: Check cache first
+  const cachedContent = fileContentCache.get(currentFilePath);
+
+  // Track cache performance
+  trackCacheLookup();
+
+  if (cachedContent) {
+    trackCacheHit("file");
+    return cachedContent;
+  }
+
+  const content = await fs.readFile(currentFilePath, "utf8");
+  fileContentCache.set(currentFilePath, content);
+  return content;
 };
 
 export async function updateImportsInFile({
@@ -75,6 +106,8 @@ export async function updateImportsInFile({
 
     if (hasChanges) {
       await fs.writeFile(currentFilePath, fileContent, "utf8");
+      // Update cache with new content
+      fileContentCache.set(currentFilePath, fileContent);
       return true;
     }
     return false;
