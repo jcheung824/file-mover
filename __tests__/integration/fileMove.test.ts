@@ -6,6 +6,33 @@ import { TestFileSystem, createTestFileContent, createMockConfig } from "../util
 import { findDependencyImports } from "../../src/importUtils";
 import { updateImportsInFile } from "../../src/fileOps";
 import { generateImportPathVariations } from "../../src/importUtils";
+import type { PerformanceTracker } from "../../src/performance";
+
+// Mock the performance tracker
+const mockPerformanceTracker = {
+  start: jest.fn(() => ({
+    end: jest.fn(() => 0),
+  })),
+  metrics: {
+    totalTime: 0,
+    fileDiscovery: { time: 0, fileCount: 0 },
+    validation: { time: 0, moveCount: 0 },
+    importAnalysis: { time: 0, totalFiles: 0, filesWithImports: 0 },
+    fileOperations: { time: 0, moves: 0, updates: 0 },
+    cachePerformance: { astCacheHits: 0, fileCacheHits: 0, totalCacheLookups: 0 },
+    individualMoves: [],
+  },
+  printSummary: jest.fn(),
+  clearCaches: jest.fn(),
+  reset: jest.fn(),
+} as PerformanceTracker;
+
+// Mock the getPerformanceTracker function
+jest.mock("../../src/performance", () => ({
+  getPerformanceTracker: jest.fn(() => mockPerformanceTracker),
+  trackCacheHit: jest.fn(),
+  trackCacheLookup: jest.fn(),
+}));
 
 // Mock global appState
 declare global {
@@ -14,6 +41,7 @@ declare global {
     fileMoveMap: Map<string, string>;
     verbose: boolean;
     dryRun: boolean;
+    performanceTracker: PerformanceTracker;
   };
 }
 
@@ -22,6 +50,7 @@ globalThis.appState = {
   fileMoveMap: new Map(),
   verbose: false,
   dryRun: false,
+  performanceTracker: mockPerformanceTracker,
 };
 
 // TODO: Fix this test
@@ -35,6 +64,18 @@ describe.skip("File Move Integration Tests", () => {
     globalThis.appState.fileMoves = [];
     globalThis.appState.verbose = false;
     globalThis.appState.dryRun = false;
+
+    // Reset all mock functions
+    jest.clearAllMocks();
+    mockPerformanceTracker.metrics = {
+      totalTime: 0,
+      fileDiscovery: { time: 0, fileCount: 0 },
+      validation: { time: 0, moveCount: 0 },
+      importAnalysis: { time: 0, totalFiles: 0, filesWithImports: 0 },
+      fileOperations: { time: 0, moves: 0, updates: 0 },
+      cachePerformance: { astCacheHits: 0, fileCacheHits: 0, totalCacheLookups: 0 },
+      individualMoves: [],
+    };
   });
 
   afterEach(async () => {
@@ -301,6 +342,72 @@ describe.skip("File Move Integration Tests", () => {
 
       // Should not crash, just return empty imports
       expect(imports).toHaveLength(0);
+    });
+  });
+
+  describe("Performance Tracking", () => {
+    it("should track performance metrics during file operations", async () => {
+      const config = createMockConfig({ cwd: testFS.getTempDir()! });
+
+      // Create a simple test structure
+      const structure = [
+        {
+          path: "packages/powerva-main/src/utils",
+          files: [
+            {
+              path: "helper.ts",
+              content: 'export const helper = () => "help";',
+            },
+          ],
+        },
+        {
+          path: "packages/powerva-main/src/components",
+          files: [
+            {
+              path: "Button.ts",
+              content: createTestFileContent.simpleImport("./utils/helper"),
+            },
+          ],
+        },
+      ];
+
+      const createdFiles = await testFS.createTestStructure(structure);
+      const helperFile = createdFiles.find((f) => f.includes("helper.ts"))!;
+      const buttonFile = createdFiles.find((f) => f.includes("Button.ts"))!;
+
+      // Move the file
+      const oldPath = helperFile;
+      const newPath = path.join(path.dirname(helperFile), "..", "shared", "helper.ts");
+
+      await fs.mkdir(path.dirname(newPath), { recursive: true });
+      await fs.rename(oldPath, newPath);
+
+      globalThis.appState.fileMoveMap.set(oldPath, newPath);
+
+      // Update imports
+      const importPathVariations = generateImportPathVariations(newPath, config);
+      const content = await testFS.readFile(buttonFile);
+      const imports = findDependencyImports({
+        content,
+        targetImportPaths: importPathVariations,
+        currentFile: buttonFile,
+      });
+
+      await updateImportsInFile({
+        currentFilePath: buttonFile,
+        imports,
+        targetFileMoveToNewPath: newPath,
+        config,
+      });
+
+      // Verify that performance tracking methods were called
+      expect(mockPerformanceTracker.start).toHaveBeenCalled();
+      expect(mockPerformanceTracker.metrics).toBeDefined();
+
+      // Verify that the timer's end method was called
+      const startCall = (mockPerformanceTracker.start as jest.Mock).mock.calls[0];
+      expect(startCall).toBeDefined();
+      expect(startCall[0]).toBeDefined(); // Should have been called with a label
     });
   });
 });
