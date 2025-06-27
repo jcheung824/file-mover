@@ -12,7 +12,7 @@ import {
   isRelativeImport,
 } from "./importUtils.js";
 import { CallExpression, ImportDeclaration } from "@babel/types";
-import { trackCacheHit, trackCacheLookup } from "./performance.js";
+import { getPerformance } from "./performance/moveTracker";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse: typeof traverseModule = (traverseModule as any).default || traverseModule;
@@ -27,8 +27,14 @@ declare global {
 globalThis.fileContentCache = fileContentCache;
 
 export async function movePhysicalFile(oldPath: string, newPath: string): Promise<void> {
+  const perf = getPerformance(globalThis.appState.verbose);
+  const moveTimer = perf.startTimer(`Physical file move: ${oldPath} → ${newPath}`);
+  
   console.log(`📦 Moving file: ${oldPath} → ${newPath}`);
   await fs.rename(oldPath, newPath);
+  
+  const moveTime = moveTimer.end();
+  perf.addFileOpTime('move', moveTime);
   
   // Update cache with new path
   const content = fileContentCache.get(oldPath);
@@ -61,10 +67,11 @@ const readFileWithValidation = async (filePath: string): Promise<string> => {
   const cachedContent = fileContentCache.get(currentFilePath);
   
   // Track cache performance
-  trackCacheLookup();
+  const perf = getPerformance(globalThis.appState.verbose);
+  perf.trackCacheLookup();
   
   if (cachedContent) {
-    trackCacheHit('file');
+    perf.trackCacheHit('file');
     return cachedContent;
   }
   
@@ -108,7 +115,14 @@ export async function updateImportsInFile({
     }
 
     if (hasChanges) {
+      const perf = getPerformance();
+      const writeTimer = perf.startTimer(`File write: ${currentFilePath}`);
+      
       await fs.writeFile(currentFilePath, fileContent, "utf8");
+      
+      const writeTime = writeTimer.end();
+      perf.addFileOpTime('write', writeTime);
+      
       // Update cache with new content
       fileContentCache.set(currentFilePath, fileContent);
       return true;
@@ -157,7 +171,6 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
       }
       return;
     }
-    // const attentionNeededImports: ImportInfo[] = []; // Do I really need this?
     const relativeImports: ImportInfo[] = [];
 
     // Should probably update the files whiles we are traversing the set
@@ -207,14 +220,6 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
           console.log(`    📝 Updated import: ${importInfo.importPath} → ${updatedImportPath}`);
         }
       }
-
-      // Add attention needed imports comment to the file
-      // if (attentionNeededImports.length > 0) {
-      //   const attentionComment = `\n\n/*\n * ATTENTION NEEDED: The following imports require manual resolution:\n${attentionNeededImports.map((imp) => ` * ${imp.originalLine}`).join("\n")}\n */\n`;
-      //   updatedContent += attentionComment;
-      //   hasChanges = true;
-      //   needsManualResolution = true;
-      // }
     }
 
     if (hasChanges) {

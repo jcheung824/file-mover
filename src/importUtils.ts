@@ -12,7 +12,7 @@ import { parse } from "@babel/parser";
 import traverseModule, { NodePath } from "@babel/traverse";
 import { CallExpression, ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration } from "@babel/types";
 import path from "path";
-import { trackCacheHit, trackCacheLookup } from "./performance.js";
+import { getPerformance } from "./performance/moveTracker";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const traverse = (traverseModule as any).default || traverseModule;
@@ -124,11 +124,17 @@ export const findDependencyImports = (arg: {
   const { content, targetImportPaths, currentFile } = arg;
   const imports: ImportInfo[] = [];
   
+  // Performance tracking
+  const perf = getPerformance(globalThis.appState.verbose);
+  const readTimer = perf.startTimer(`File read: ${currentFile}`);
+  const parseTimer = perf.startTimer(`AST parse: ${currentFile}`);
+  const matchTimer = perf.startTimer(`Import match: ${currentFile}`);
+  
   // OPTIMIZATION: Check if we have a cached AST for this file
   let ast = astCache.get(currentFile);
   
   // Track cache performance
-  trackCacheLookup();
+  perf.trackCacheLookup();
   
   if (!ast) {
     try {
@@ -142,36 +148,39 @@ export const findDependencyImports = (arg: {
       if (globalThis.appState.verbose) {
         console.warn(`⚠️  Could not parse ${currentFile}: ${e instanceof Error ? e.message : String(e)}`);
       }
+      // End timers even on error
+      readTimer.end();
+      parseTimer.end();
+      matchTimer.end();
       return imports;
     }
   } else {
     // Cache hit
-    trackCacheHit('ast');
+    perf.trackCacheHit('ast');
   }
   
-  // OPTIMIZATION: Use a more efficient traversal that stops early if no matches found
-  let hasMatches = false;
+  const parseTime = parseTimer.end();
   
   traverse(ast, {
     ImportDeclaration: (pathNode: NodePath<ImportDeclaration>) => {
       const importPath = pathNode.node.source?.value;
       if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
-        hasMatches = true;
+ 
       }
     },
     ExportAllDeclaration: (pathNode: NodePath<ExportAllDeclaration>) => {
       const importPath = pathNode.node.source?.value;
       if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
-        hasMatches = true;
+      
       }
     },
     ExportNamedDeclaration: (pathNode: NodePath<ExportNamedDeclaration>) => {
       const importPath = pathNode.node.source?.value;
       if (typeof importPath === "string" && matchesTarget({ importPath, targetImportPaths, currentFile })) {
         imports.push(extractImportInfo(pathNode, content, importPath));
-        hasMatches = true;
+        
       }
     },
     CallExpression: (pathNode: NodePath<CallExpression>) => {
@@ -182,12 +191,18 @@ export const findDependencyImports = (arg: {
           const importPath = arg0.value;
           if (matchesTarget({ importPath, targetImportPaths, currentFile })) {
             imports.push(extractImportInfo(pathNode, content, importPath));
-            hasMatches = true;
+           
           }
         }
       }
     },
   });
+  
+  const readTime = readTimer.end();
+  const matchTime = matchTimer.end();
+  
+  // Track detailed file analysis timing
+  perf.trackFileAnalysis(currentFile, readTime, parseTime, matchTime, imports.length);
   
   return imports;
 };
@@ -228,13 +243,11 @@ export const matchesTarget = ({
   }
 
   const resolvedPath = resolveImportPath(currentFile, importPath);
-  const resolvedPathWithoutExt = removeExtension(resolvedPath);
+  const resolvedPathWithoutExt = normalizePath(removeExtension(resolvedPath));
   return targetImportPaths.some(
     (targetPath) =>
-      normalizePath(resolvedPath) === targetPath ||
-      normalizePath(resolvedPathWithoutExt) === targetPath ||
-      normalizePath(resolvedPath) === removeExtension(targetPath) ||
-      normalizePath(resolvedPathWithoutExt) === removeExtension(targetPath)
+      resolvedPathWithoutExt == targetPath ||
+    resolvedPathWithoutExt === removeExtension(targetPath)
   );
 };
 
