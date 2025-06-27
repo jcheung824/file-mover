@@ -21,7 +21,7 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       "max-len": ["warn", 120],
-      "linebreak-style": ["error", "auto"],
+      "linebreak-style": ["error", "unix"],
       "operator-linebreak": "error",
       "prettier/prettier": [
         "error",
@@ -50,6 +50,16 @@ export default [
         exports: "readonly",
         module: "readonly",
         require: "readonly",
+        // Jest globals
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        jest: "readonly",
       },
     },
   },

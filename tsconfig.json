@@ -10,11 +10,11 @@
     "resolveJsonModule": true,
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
-    "types": ["node"],
+    "types": ["node", "jest"],
     "sourceMap": true,
     "inlineSourceMap": false,
     "inlineSources": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "__tests__/**/*"],
   "exclude": ["node_modules", "dist", "build"]
 }

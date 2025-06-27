@@ -1,6 +1,5 @@
-// File operations for moving files and updating imports
 import { promises as fs } from "fs";
-import { ImportInfo, Config } from "./types.js";
+import { ImportInfo, Config } from "./types";
 import { parse } from "@babel/parser";
 import traverseModule, { NodePath } from "@babel/traverse";
 import {
@@ -10,7 +9,7 @@ import {
   handlePackageImportsUpdate,
   isMonorepoPackageImport,
   isRelativeImport,
-} from "./importUtils.js";
+} from "./importUtils";
 import { CallExpression, ImportDeclaration } from "@babel/types";
 import { trackCacheHit, trackCacheLookup } from "./performance.js";
 
@@ -29,7 +28,7 @@ globalThis.fileContentCache = fileContentCache;
 export async function movePhysicalFile(oldPath: string, newPath: string): Promise<void> {
   console.log(`📦 Moving file: ${oldPath} → ${newPath}`);
   await fs.rename(oldPath, newPath);
-  
+
   // Update cache with new path
   const content = fileContentCache.get(oldPath);
   if (content) {
@@ -41,33 +40,31 @@ export async function movePhysicalFile(oldPath: string, newPath: string): Promis
 const readFileWithValidation = async (filePath: string): Promise<string> => {
   let currentFilePath = filePath;
   try {
-
-    if(checkIfFileIsPartOfMove(currentFilePath)){
+    if (checkIfFileIsPartOfMove(currentFilePath)) {
       const latestPath = globalThis.appState.fileMoveMap.get(currentFilePath);
-      if(latestPath){
+      if (latestPath) {
         currentFilePath = latestPath;
       }
     }
 
     await fs.access(currentFilePath);
-
   } catch (accessError) {
     console.error(`❌ File not found: ${filePath}`);
     console.error(`   This might indicate a race condition or path resolution issue.`);
     throw accessError;
   }
-  
+
   // OPTIMIZATION: Check cache first
   const cachedContent = fileContentCache.get(currentFilePath);
-  
+
   // Track cache performance
   trackCacheLookup();
-  
+
   if (cachedContent) {
-    trackCacheHit('file');
+    trackCacheHit("file");
     return cachedContent;
   }
-  
+
   const content = await fs.readFile(currentFilePath, "utf8");
   fileContentCache.set(currentFilePath, content);
   return content;
@@ -76,11 +73,11 @@ const readFileWithValidation = async (filePath: string): Promise<string> => {
 export async function updateImportsInFile({
   currentFilePath,
   imports,
-  newPath,
+  targetFileMoveToNewPath,
 }: {
   currentFilePath: string;
   imports: ImportInfo[];
-  newPath: string;
+  targetFileMoveToNewPath: string;
   config: Config;
 }): Promise<boolean> {
   try {
@@ -93,7 +90,7 @@ export async function updateImportsInFile({
       const { updated, updatedFileContent, updatedImportPath } = handlePackageImportsUpdate({
         currentImportPath,
         currentFilePath,
-        newPath,
+        targetFileMoveToNewPath,
         fileContent,
       });
 
@@ -190,7 +187,6 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
     }
 
     for (const importInfo of relativeImports) {
-
       //TODO:
       // 1. Find all potential import path pattern and replace them all with the relative + monorepo import path
 
@@ -207,14 +203,6 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
           console.log(`    📝 Updated import: ${importInfo.importPath} → ${updatedImportPath}`);
         }
       }
-
-      // Add attention needed imports comment to the file
-      // if (attentionNeededImports.length > 0) {
-      //   const attentionComment = `\n\n/*\n * ATTENTION NEEDED: The following imports require manual resolution:\n${attentionNeededImports.map((imp) => ` * ${imp.originalLine}`).join("\n")}\n */\n`;
-      //   updatedContent += attentionComment;
-      //   hasChanges = true;
-      //   needsManualResolution = true;
-      // }
     }
 
     if (hasChanges) {

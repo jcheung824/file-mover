@@ -1,5 +1,5 @@
 // Import analysis and import statement finding logic
-import { ImportInfo, Config, FileDirection } from "./types.js";
+import { ImportInfo, Config, FileDirection, ImportPath, NormalizedFilePath } from "./types";
 import {
   normalizePath,
   removeExtension,
@@ -7,7 +7,7 @@ import {
   resolveImportPath,
   getModuleType,
   handleMonoRepoImportPathToAbsolutePath,
-} from "./pathUtils.js";
+} from "./pathUtils";
 import { parse } from "@babel/parser";
 import traverseModule, { NodePath } from "@babel/traverse";
 import { CallExpression, ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration } from "@babel/types";
@@ -62,18 +62,23 @@ export const extractImportInfo = (pathNode: NodePath, content: string, importPat
 export const generateImportPathVariations = (targetPath: string, config: Config): string[] => {
   const normalized = path.resolve(targetPath);
   const paths = new Set<string>();
-  
+
   // Check if this is an index file
   const fileName = path.basename(normalized);
   const fileNameWithoutExt = path.basename(normalized, path.extname(normalized));
-  const isIndexFile = fileName === "index.ts" || fileName === "index.tsx" || fileName === "index.js" || fileName === "index.jsx" || fileNameWithoutExt === "index";
-  
+  const isIndexFile =
+    fileName === "index.ts" ||
+    fileName === "index.tsx" ||
+    fileName === "index.js" ||
+    fileName === "index.jsx" ||
+    fileNameWithoutExt === "index";
+
   // Helper function to add path variations (with and without extension)
   const addPathVariations = (basePath: string) => {
     const withoutExt = removeExtension(basePath);
     paths.add(normalizePath(basePath));
     paths.add(normalizePath(withoutExt));
-    
+
     // Add directory variations if this is an index file
     if (isIndexFile) {
       const dirPath = path.dirname(basePath);
@@ -82,15 +87,15 @@ export const generateImportPathVariations = (targetPath: string, config: Config)
       paths.add(normalizePath(dirPathWithoutExt));
     }
   };
-  
+
   // Add variations for absolute path
   addPathVariations(normalized);
-  
+
   // Handle MS import path
   const msImportPath = getMsImportPath(normalized);
   if (msImportPath) {
     paths.add(msImportPath);
-    
+
     // Add directory-based MS import path variations
     if (isIndexFile) {
       const msDirPath = msImportPath.replace(/\/index$/, "");
@@ -99,11 +104,11 @@ export const generateImportPathVariations = (targetPath: string, config: Config)
       }
     }
   }
-  
+
   // Add variations for relative to CWD path
   const relativeToCwd = path.relative(config.cwd, normalized);
   addPathVariations(relativeToCwd);
-  
+
   return Array.from(paths);
 };
 
@@ -219,22 +224,23 @@ export const matchesTarget = ({
   targetImportPaths,
   currentFile,
 }: {
-  importPath: string;
-  targetImportPaths: string[];
+  importPath: ImportPath;
+  targetImportPaths: NormalizedFilePath[];
   currentFile: string;
 }): boolean => {
   if (targetImportPaths.includes(importPath)) {
     return true;
   }
 
-  const resolvedPath = resolveImportPath(currentFile, importPath);
-  const resolvedPathWithoutExt = removeExtension(resolvedPath);
+  const resolvedPath = normalizePath(resolveImportPath(currentFile, importPath));
+  const resolvedPathWithoutExt = normalizePath(removeExtension(resolvedPath));
+
   return targetImportPaths.some(
     (targetPath) =>
-      normalizePath(resolvedPath) === targetPath ||
-      normalizePath(resolvedPathWithoutExt) === targetPath ||
-      normalizePath(resolvedPath) === removeExtension(targetPath) ||
-      normalizePath(resolvedPathWithoutExt) === removeExtension(targetPath)
+      resolvedPath === targetPath ||
+      resolvedPathWithoutExt === targetPath ||
+      resolvedPath === removeExtension(targetPath) ||
+      resolvedPathWithoutExt === removeExtension(targetPath)
   );
 };
 
@@ -263,12 +269,12 @@ export const setFileContentIfRegexMatches = (
 export const handlePackageImportsUpdate = ({
   currentImportPath,
   currentFilePath,
-  newPath,
+  targetFileMoveToNewPath: TargetFileMoveToNewPath,
   fileContent,
 }: {
   currentImportPath: string;
   currentFilePath: string;
-  newPath: string;
+  targetFileMoveToNewPath: string;
   fileContent: string;
 }): {
   updated: boolean;
@@ -277,12 +283,12 @@ export const handlePackageImportsUpdate = ({
 } => {
   const fileDirection = fileMoveDirection({
     oldPath: currentFilePath,
-    newPath,
+    newPath: TargetFileMoveToNewPath,
   });
 
   let updatedImportPath: string = "";
   let updated: boolean = false;
-  let newRelativePath = getRelativeImportPath(currentFilePath, newPath);
+  let newRelativePath = getRelativeImportPath(currentFilePath, TargetFileMoveToNewPath);
 
   // Avoid bare import
   if (!newRelativePath.startsWith("../") && !newRelativePath.startsWith("./")) {
@@ -295,20 +301,20 @@ export const handlePackageImportsUpdate = ({
     if (isMonorepoPackageImport(currentImportPath)) {
       updatedImportPath = getRelativeImportPath(
         currentFilePath,
-        handleMonoRepoImportPathToAbsolutePath(currentFilePath, newPath)
+        handleMonoRepoImportPathToAbsolutePath(currentFilePath, TargetFileMoveToNewPath)
       );
     } else {
       updatedImportPath = newRelativePath;
     }
   } else if (fileDirection === "betweenPackages") {
-    if (isMonorepoPackageImport(newPath)) {
+    if (isMonorepoPackageImport(TargetFileMoveToNewPath)) {
       updatedImportPath = currentImportPath;
     } else {
-      updatedImportPath = getMsImportPath(newPath);
+      updatedImportPath = getMsImportPath(TargetFileMoveToNewPath);
     }
   } else {
     // We can't import package from app. User Have to move other dependencies to the app as well.
-    console.warn(`⚠️  Currently not supported: ${currentFilePath} → ${newPath}`);
+    console.warn(`⚠️  Currently not supported: ${currentFilePath} → ${TargetFileMoveToNewPath}`);
     return { updated, updatedFileContent: fileContent, updatedImportPath };
   }
 
@@ -342,7 +348,7 @@ export const handleMovingFileImportsUpdate = ({
   updatedImportPath: string;
 } => {
   const targetImportFileAbsPath = path.resolve(path.dirname(originalMovedFilePath), importPath);
-  
+
   // Check if the imported file has been moved
   const importFilePath = checkIfFileIsPartOfMove(targetImportFileAbsPath)
     ? globalThis.appState.fileMoveMap.get(targetImportFileAbsPath) || targetImportFileAbsPath

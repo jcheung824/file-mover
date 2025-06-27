@@ -104,14 +104,14 @@ async function getDirectoryMoves(sourceDir: string, targetDir: string): Promise<
  */
 async function batchUpdateImports(
   importAnalysis: ImportAnalysis[],
-  newPath: string,
+  targetFileMoveToNewPath: string,
   config: Config
 ): Promise<number> {
   const updatePromises = importAnalysis.map(async ({ file, imports }) => {
     const updated = await updateImportsInFile({
       currentFilePath: file,
       imports,
-      newPath,
+      targetFileMoveToNewPath,
       config,
     });
     return updated ? 1 : 0;
@@ -127,7 +127,7 @@ async function batchUpdateImports(
 async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: string]>): Promise<void> {
   const { performanceTracker } = globalThis.appState;
   const totalTimer = performanceTracker.start("Total execution");
-  
+
   // Expand directory moves into individual file moves
   const expandedMoves: Array<[string, string]> = [];
   for (const [fromPath, toPath] of moves) {
@@ -147,7 +147,10 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
     }
   }
 
-  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [path.normalize(fromPath), path.normalize(toPath)]);
+  globalThis.appState.fileMoves = expandedMoves.map(([fromPath, toPath]) => [
+    path.normalize(fromPath),
+    path.normalize(toPath),
+  ]);
   globalThis.appState.fileMoveMap = new Map([
     ...globalThis.appState.fileMoves,
     ...globalThis.appState.fileMoves.map<[string, string]>((entry) => [
@@ -186,7 +189,7 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
   sourceFiles = sourceFiles.filter((file) => !globalThis.appState.fileMoveMap.has(file));
   performanceTracker.metrics.fileDiscovery.time = fileDiscoveryTimer.end();
   performanceTracker.metrics.fileDiscovery.fileCount = sourceFiles.length;
-  
+
   console.log(`📁 Found ${sourceFiles.length} source files to check`);
   const deadFiles: string[] = [];
 
@@ -239,8 +242,8 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       await movePhysicalFile(fromPath, toPath);
       moveMetrics.moveTime = moveTimer.end();
 
-      // TODO: If we want to let the user know files are dead, we have to return update infor of 
-      // the moved files 
+      // TODO: If we want to let the user know files are dead, we have to return update infor of
+      // the moved files
       await updateImportsInMovedFile(fromPath, toPath);
 
       // OPTIMIZATION: Batch update all imports in other files
@@ -345,7 +348,11 @@ async function findSourceFiles(): Promise<string[]> {
 /**
  * Analyze which files import the target file
  */
-async function analyzeImports(sourceFiles: string[], targetPath: string, targetImportPaths: string[]): Promise<ImportAnalysis[]> {
+async function analyzeImports(
+  sourceFiles: string[],
+  targetPath: string,
+  targetImportPaths: string[]
+): Promise<ImportAnalysis[]> {
   const results: ImportAnalysis[] = [];
 
   if (globalThis.appState.verbose) {
@@ -386,7 +393,7 @@ async function analyzeImports(sourceFiles: string[], targetPath: string, targetI
   });
 
   const analysisResults = await Promise.all(analysisPromises);
-  
+
   // Filter out null results and add to results array
   for (const result of analysisResults) {
     if (result) {

@@ -32,14 +32,8 @@ Prepare a `move.json` file in the root directory, containing an array of `[from,
 
 ```json
 [
-  [
-    "C:/path/to/source/file1.ts",
-    "C:/path/to/destination/file1.ts"
-  ],
-  [
-    "C:/path/to/source/file2.ts",
-    "C:/path/to/destination/file2.ts"
-  ]
+  ["C:/path/to/source/file1.ts", "C:/path/to/destination/file1.ts"],
+  ["C:/path/to/source/file2.ts", "C:/path/to/destination/file2.ts"]
 ]
 ```
 
@@ -137,13 +131,15 @@ Add this pair to `move.json` and run the tool. All imports of `AdaptiveAuthoring
 ---
 
 ### ppux workflow process
-1. install the 
+
+1. install the
 
 `package.json` command: `"file-mover": "node node_modules/file-mover/dist/index.js exmaple.json && echo 'File move completed successfully!' && rush lint -o powerva-main -o powerva-core -o powerva-microsoft-com -o powerva-embedded-experiences --fix"`
 
 ---
 
 ### Known issues and TODO:
+
 1. Use relative path(?)
 2. Current it doesn't support moving files from `apps` -> `package` due to it's imposable (We could but it'd mean more file scanning) to import app files from package and update file path from dist import to it's original export
 

@@ -21,3 +21,7 @@ export interface Config {
 }
 
 export type FileDirection = "self" | "betweenPackages" | "packageToApp" | "unknown";
+
+export type NormalizedFilePath = string;
+export type NormalizedFilePathWithoutExtension = string;
+export type ImportPath = string;
