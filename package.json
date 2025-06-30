@@ -19,10 +19,11 @@
     "postbuild": "node scripts/fix-extensions.js",
     "start": "npm run build && node --max-old-space-size=16000 ./dist/index.js ./temp/example.json",
     "watch": "tsc --watch --project tsconfig.json",
-    "startv": "npm run build && node --max-old-space-size=16000 ./dist/index.js --verbose",
+    "startv": "npm run build && node --max-old-space-size=16000 ./dist/index.js ./temp/example.json --verbose",
     "prepublishOnly": "npm run build",
     "lint": "eslint . --fix",
-    "lint:check": "eslint ."
+    "lint:check": "eslint .",
+    "perf:report": "node scripts/generate-performance-report.js"
   },
   "dependencies": {
     "@babel/parser": "^7.27.5",
@@ -58,6 +59,7 @@
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
     "eslint": "^8.56.0",
+    "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.0",
     "prettier": "^3.5.3"
   }

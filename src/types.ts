@@ -5,6 +5,7 @@ export interface ImportInfo {
   originalLine: string;
   importPath: string;
   matchedText: string;
+  matchedUpdateToFilePath: string;
 }
 
 export interface ImportAnalysis {
@@ -19,5 +20,8 @@ export interface Config {
   includePatterns: string[];
   cwd: string;
 }
+
+export type ImportPathCache = Map<string, string[]>;
+export type InvertedImportPathCache = Map<string, string>;
 
 export type FileDirection = "self" | "betweenPackages" | "packageToApp" | "unknown";
