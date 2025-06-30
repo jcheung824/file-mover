@@ -23,7 +23,7 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       "max-len": "off", // Let Prettier handle line length
-      "linebreak-style": ["error", "windows"],
+      "linebreak-style": ["error", "unix"],
       // Remove operator-linebreak - let Prettier handle this
       "prettier/prettier": [
         "error",
@@ -34,7 +34,7 @@ export default [
           semi: true,
           tabWidth: 2,
           useTabs: false,
-          endOfLine: "crlf", // Match your linebreak-style
+          endOfLine: "lf",
         },
       ],
     },
@@ -67,6 +67,18 @@ export default [
         beforeAll: "readonly",
         afterAll: "readonly",
         jest: "readonly",
+      },
+    },
+  },
+  // Exclude temp directory from TypeScript parsing
+  {
+    files: ["temp/**/*"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: "module",
+        // Remove project reference for temp files
       },
     },
   },
