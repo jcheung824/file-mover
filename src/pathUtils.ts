@@ -102,3 +102,13 @@ export const handleMonoRepoImportPathToAbsolutePath = (directory: string, import
 
   return path.normalize(path.join(packagesDir, packageName, srcPath));
 };
+
+/**
+ * Check if a file is an index file (index.ts, index.tsx, index.js, index.jsx, or just index)
+ * @param filePath - The file path to check
+ * @returns True if the file is an index file
+ */
+export const isIndexFile = (filePath: string): boolean => {
+  const fileNameWithoutExt = path.basename(filePath, path.extname(filePath));
+  return fileNameWithoutExt === "index";
+};

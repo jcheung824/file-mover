@@ -1,0 +1,416 @@
+{
+  "timestamp": "2025-06-27T22:22:51.444Z",
+  "runId": "2025-06-27_15-19-31",
+  "metrics": {
+    "totalTime": 200385.52670001984,
+    "fileDiscovery": {
+      "time": 494.39950013160706,
+      "fileCount": 8075
+    },
+    "validation": {
+      "time": 16.112499952316284,
+      "moveCount": 23
+    },
+    "importAnalysis": {
+      "time": 8405.333300113678,
+      "totalFiles": 8075,
+      "filesWithImports": 1,
+      "fileReadTime": 0,
+      "astParseTime": 0,
+      "importMatchingTime": 0,
+      "individualFileTimes": []
+    },
+    "fileOperations": {
+      "time": 0,
+      "moves": 0,
+      "updates": 8,
+      "writeTime": 0,
+      "moveTime": 199864.74670004845
+    },
+    "cachePerformance": {
+      "astCacheHits": 0,
+      "fileCacheHits": 0,
+      "totalCacheLookups": 0
+    },
+    "individualMoves": [
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\index.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\index.ts",
+        "analysisTime": 27205.960900068283,
+        "moveTime": 2.754699945449829,
+        "movedFileUpdateTime": 1.9459998607635498,
+        "updateTime": 5.553100109100342,
+        "filesUpdated": 4,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 4
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\LinkEntityDecorator.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\LinkEntityDecorator.tsx",
+        "analysisTime": 6898.04120016098,
+        "moveTime": 2.103100061416626,
+        "movedFileUpdateTime": 4.676700115203857,
+        "updateTime": 0.014799833297729492,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\RichTextEditor.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\RichTextEditor.tsx",
+        "analysisTime": 8875.626999855042,
+        "moveTime": 2.462700128555298,
+        "movedFileUpdateTime": 29.52270007133484,
+        "updateTime": 2.591899871826172,
+        "filesUpdated": 1,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 1
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\AttachmentModalityToolbar.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\AttachmentModalityToolbar.tsx",
+        "analysisTime": 6979.049499988556,
+        "moveTime": 2.36899995803833,
+        "movedFileUpdateTime": 10.354199886322021,
+        "updateTime": 0.02369999885559082,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\BaseToolbar.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\BaseToolbar.tsx",
+        "analysisTime": 9519.782700061798,
+        "moveTime": 3.3257999420166016,
+        "movedFileUpdateTime": 4.7677998542785645,
+        "updateTime": 0.01640009880065918,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\index.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\index.ts",
+        "analysisTime": 9495.58159995079,
+        "moveTime": 2.3310999870300293,
+        "movedFileUpdateTime": 1.463900089263916,
+        "updateTime": 0.01399993896484375,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\ResponseEditorToolbar.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\ResponseEditorToolbar.tsx",
+        "analysisTime": 6793.623800039291,
+        "moveTime": 2.2932000160217285,
+        "movedFileUpdateTime": 8.324300050735474,
+        "updateTime": 0.021899938583374023,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\SpeechModalityToolbar.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\SpeechModalityToolbar.tsx",
+        "analysisTime": 9378.599999904633,
+        "moveTime": 3.3664000034332275,
+        "movedFileUpdateTime": 8.727399826049805,
+        "updateTime": 0.01739978790283203,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\TextModalityToolbar.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\TextModalityToolbar.tsx",
+        "analysisTime": 6832.0655999183655,
+        "moveTime": 2.2611000537872314,
+        "movedFileUpdateTime": 9.02620005607605,
+        "updateTime": 1.690500020980835,
+        "filesUpdated": 1,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 1
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\ToolBarClearDialog.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\ToolBarClearDialog.tsx",
+        "analysisTime": 8759.970599889755,
+        "moveTime": 2.4117000102996826,
+        "movedFileUpdateTime": 5.442300081253052,
+        "updateTime": 0.02950000762939453,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useHyperlink.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useHyperlink.ts",
+        "analysisTime": 6354.519599914551,
+        "moveTime": 11.58080005645752,
+        "movedFileUpdateTime": 5.449100017547607,
+        "updateTime": 0.02219986915588379,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useTagSSML.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useTagSSML.ts",
+        "analysisTime": 8761.64810013771,
+        "moveTime": 2.6288998126983643,
+        "movedFileUpdateTime": 5.559700012207031,
+        "updateTime": 0.01360011100769043,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useToolbarAdd.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useToolbarAdd.tsx",
+        "analysisTime": 6437.691699981689,
+        "moveTime": 2.263400077819824,
+        "movedFileUpdateTime": 3.984600067138672,
+        "updateTime": 0.012700080871582031,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useToolbarAttribute.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useToolbarAttribute.ts",
+        "analysisTime": 8392.114399909973,
+        "moveTime": 2.4135000705718994,
+        "movedFileUpdateTime": 5.365099906921387,
+        "updateTime": 0.012399911880493164,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useToolbarClear.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useToolbarClear.tsx",
+        "analysisTime": 6367.496899843216,
+        "moveTime": 2.172800064086914,
+        "movedFileUpdateTime": 4.094499826431274,
+        "updateTime": 0.013300180435180664,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useToolbarPowerFx.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useToolbarPowerFx.tsx",
+        "analysisTime": 8739.121700048447,
+        "moveTime": 2.368799924850464,
+        "movedFileUpdateTime": 5.470700025558472,
+        "updateTime": 0.014699935913085938,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\toolbars\\useToolbarVariable.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\toolbars\\useToolbarVariable.tsx",
+        "analysisTime": 6408.465800046921,
+        "moveTime": 2.1984000205993652,
+        "movedFileUpdateTime": 4.754800081253052,
+        "updateTime": 0.016300201416015625,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\utils\\copypaste.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\utils\\copypaste.ts",
+        "analysisTime": 8510.992500066757,
+        "moveTime": 2.6068999767303467,
+        "movedFileUpdateTime": 5.562299966812134,
+        "updateTime": 2.0367000102996826,
+        "filesUpdated": 1,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 1
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\utils\\getEntityRange.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\utils\\getEntityRange.ts",
+        "analysisTime": 8722.77849984169,
+        "moveTime": 2.297800064086914,
+        "movedFileUpdateTime": 5.0446999073028564,
+        "updateTime": 0.0176999568939209,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\utils\\getSelectedBlock.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\utils\\getSelectedBlock.ts",
+        "analysisTime": 6508.691099882126,
+        "moveTime": 2.309499979019165,
+        "movedFileUpdateTime": 2.5791001319885254,
+        "updateTime": 0.013300180435180664,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\utils\\keyBindingFunctions.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\utils\\keyBindingFunctions.ts",
+        "analysisTime": 8541.025500059128,
+        "moveTime": 3.3503000736236572,
+        "movedFileUpdateTime": 2.831899881362915,
+        "updateTime": 0.02069997787475586,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\VariableEntityDecorator.tsx",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\VariableEntityDecorator.tsx",
+        "analysisTime": 6723.257800102234,
+        "moveTime": 2.1179001331329346,
+        "movedFileUpdateTime": 7.409300088882446,
+        "updateTime": 0.013900041580200195,
+        "filesUpdated": 0,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 0
+        }
+      },
+      {
+        "fromPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\pages\\adaptive-authoring\\response-editor\\rich-text-editor\\variableParser.ts",
+        "toPath": "C:\\Users\\jamescheung\\Desktop\\Work\\project\\power-platform-ux\\packages\\powerva-main\\src\\common\\components\\schema-demo\\variableParser.ts",
+        "analysisTime": 8406.47820019722,
+        "moveTime": 2.1833999156951904,
+        "movedFileUpdateTime": 6.0696001052856445,
+        "updateTime": 1.8657000064849854,
+        "filesUpdated": 1,
+        "detailedAnalysis": {
+          "fileReadTime": 0,
+          "astParseTime": 0,
+          "importMatchingTime": 0,
+          "filesProcessed": 8075,
+          "filesWithImports": 1
+        }
+      }
+    ]
+  },
+  "summary": {
+    "totalFiles": 8075,
+    "totalMoves": 23,
+    "totalUpdates": 8,
+    "avgAnalysisTime": 8678.808030429094,
+    "avgMoveTime": 2.8770087076270063,
+    "avgUpdateTime": 0.6107130465300187,
+    "avgFileAnalysisTime": 0,
+    "cacheHitRate": 0
+  }
+}

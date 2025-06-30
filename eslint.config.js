@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import prettier from "eslint-plugin-prettier";
+import prettierConfig from "eslint-config-prettier";
 
 export default [
   js.configs.recommended,
@@ -12,6 +13,7 @@ export default [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: "module",
+        project: "./tsconfig.json", // Add this if you have a tsconfig.json
       },
     },
     plugins: {
@@ -20,20 +22,25 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
-      "max-len": ["warn", 120],
-      "linebreak-style": ["error", "auto"],
-      "operator-linebreak": "error",
+      "max-len": "off", // Let Prettier handle line length
+      "linebreak-style": ["error", "windows"],
+      // Remove operator-linebreak - let Prettier handle this
       "prettier/prettier": [
         "error",
         {
           printWidth: 120,
           singleQuote: false,
           trailingComma: "es5",
-          endOfLine: "lf",
+          semi: true,
+          tabWidth: 2,
+          useTabs: false,
+          endOfLine: "crlf", // Match your linebreak-style
         },
       ],
     },
   },
+  // Add Prettier config to disable conflicting rules
+  prettierConfig,
   {
     files: ["**/*.{js,ts,tsx}"],
     languageOptions: {
@@ -50,6 +57,16 @@ export default [
         exports: "readonly",
         module: "readonly",
         require: "readonly",
+        // Jest globals
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        jest: "readonly",
       },
     },
   },
