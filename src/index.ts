@@ -319,11 +319,13 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
     deadFiles.forEach((file) => console.log(`  - ${file}`));
   }
 
-  // Print performance summary
-  await tracker.printSummary();
+  if (globalThis.appState.verbose) {
+    // Print performance summary
+    await tracker.printSummary();
 
-  // Export import path hits summary to JSON
-  await exportImportPathHitsToJson();
+    // Export import path hits summary to JSON
+    await exportImportPathHitsToJson();
+  }
 }
 
 /**
