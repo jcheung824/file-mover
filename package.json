@@ -1,6 +1,6 @@
 {
   "name": "file-mover",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Script to move files and update imports automatically",
   "main": "dist/index.js",
   "type": "module",
