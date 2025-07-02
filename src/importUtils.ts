@@ -325,6 +325,7 @@ export const createImportStatementRegexPatterns = (
   staticImportPattern: RegExp;
   dynamicImportPattern: RegExp;
   requirePattern: RegExp;
+  jestMockPattern: RegExp;
 } => {
   const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -337,7 +338,10 @@ export const createImportStatementRegexPatterns = (
   // require('...')
   const requirePattern = new RegExp(`require\\(\\s*(['"\`])${escapeRegex(importPath)}\\1\\s*\\)`, "g");
 
-  return { staticImportPattern, dynamicImportPattern, requirePattern };
+  // jest.mock('...')
+  const jestMockPattern = new RegExp(`jest\\.mock\\(\\s*(['"\`])${escapeRegex(importPath)}\\1\\s*,`, "g");
+
+  return { staticImportPattern, dynamicImportPattern, requirePattern, jestMockPattern };
 };
 
 export const setFileContentIfRegexMatches = (
@@ -349,6 +353,23 @@ export const setFileContentIfRegexMatches = (
     return fileContent.replace(regex, replacement);
   }
   return null;
+};
+
+// Helper function to apply all import path replacements
+export const applyImportPathReplacements = (
+  fileContent: string,
+  importPath: string,
+  updatedImportPath: string
+): string | null => {
+  const { staticImportPattern, dynamicImportPattern, requirePattern, jestMockPattern } =
+    createImportStatementRegexPatterns(importPath);
+
+  return (
+    setFileContentIfRegexMatches(fileContent, staticImportPattern, `from $1${updatedImportPath}$1`) ??
+    setFileContentIfRegexMatches(fileContent, dynamicImportPattern, `import($1${updatedImportPath}$1)`) ??
+    setFileContentIfRegexMatches(fileContent, requirePattern, `require($1${updatedImportPath}$1)`) ??
+    setFileContentIfRegexMatches(fileContent, jestMockPattern, `jest.mock($1${updatedImportPath}$1,`)
+  );
 };
 
 // This I should separate this into two functions from many to one and one to many
@@ -381,9 +402,6 @@ export const handlePackageImportsUpdate = ({
     newRelativePath = `./${newRelativePath}`;
   }
 
-  const { staticImportPattern, dynamicImportPattern, requirePattern } =
-    createImportStatementRegexPatterns(currentImportPath);
-
   if (fileDirection === "self") {
     if (isMonorepoPackageImport(currentImportPath)) {
       updatedImportPath = getRelativeImportPath(
@@ -408,10 +426,7 @@ export const handlePackageImportsUpdate = ({
   // AST have walked through the file tree, we should just directly update over there
   // instead of search again
 
-  const updatedContent =
-    setFileContentIfRegexMatches(fileContent, staticImportPattern, `from $1${updatedImportPath}$1`) ??
-    setFileContentIfRegexMatches(fileContent, dynamicImportPattern, `import($1${updatedImportPath}$1)`) ??
-    setFileContentIfRegexMatches(fileContent, requirePattern, `require($1${updatedImportPath}$1)`);
+  const updatedContent = applyImportPathReplacements(fileContent, currentImportPath, updatedImportPath);
 
   return {
     updated: !!updatedContent,
@@ -458,8 +473,6 @@ export const handleMovingFileImportsUpdate = ({
     newRelativePath = `./${newRelativePath}`;
   }
 
-  const { staticImportPattern, dynamicImportPattern, requirePattern } = createImportStatementRegexPatterns(importPath);
-
   if (fileDirection === "self") {
     if (isMonorepoPackageImport(importPath)) {
       updatedImportPath = getRelativeImportPath(
@@ -484,10 +497,7 @@ export const handleMovingFileImportsUpdate = ({
   // AST have walked through the file tree, we should just directly update over there
   // instead of search again
 
-  const updatedContent =
-    setFileContentIfRegexMatches(fileContent, staticImportPattern, `from $1${updatedImportPath}$1`) ??
-    setFileContentIfRegexMatches(fileContent, dynamicImportPattern, `import($1${updatedImportPath}$1)`) ??
-    setFileContentIfRegexMatches(fileContent, requirePattern, `require($1${updatedImportPath}$1)`);
+  const updatedContent = applyImportPathReplacements(fileContent, importPath, updatedImportPath);
 
   return {
     updated: !!updatedContent,

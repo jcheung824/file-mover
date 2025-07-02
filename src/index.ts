@@ -216,12 +216,6 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
       // Clear previous file times to get accurate data for this move
       tracker.clearFileAnalysisTimes();
 
-      // const importAnalysis = await analyzeImportsWithTracking(
-      //   sourceFiles,
-      //   importPathCache.get(fromPath)!,
-      //   tracker
-      // );
-
       moveMetrics.analysisTime = tracker.endAnalysisTimer();
 
       moveMetrics.detailedAnalysis.filesProcessed = sourceFiles.length;
