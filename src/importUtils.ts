@@ -326,6 +326,7 @@ export const createImportStatementRegexPatterns = (
   dynamicImportPattern: RegExp;
   requirePattern: RegExp;
   jestMockPattern: RegExp;
+  jestRequireMockPattern: RegExp;
 } => {
   const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -341,7 +342,13 @@ export const createImportStatementRegexPatterns = (
   // jest.mock('...')
   const jestMockPattern = new RegExp(`jest\\.mock\\(\\s*(['"\`])${escapeRegex(importPath)}\\1\\s*,`, "g");
 
-  return { staticImportPattern, dynamicImportPattern, requirePattern, jestMockPattern };
+  // jest.requireMock('...')
+  const jestRequireMockPattern = new RegExp(
+    `jest\\.requireMock\\(\\s*(['"\`])${escapeRegex(importPath)}\\1\\s*\\)`,
+    "g"
+  );
+
+  return { staticImportPattern, dynamicImportPattern, requirePattern, jestMockPattern, jestRequireMockPattern };
 };
 
 export const setFileContentIfRegexMatches = (
@@ -355,20 +362,22 @@ export const setFileContentIfRegexMatches = (
   return null;
 };
 
+// TODO: ideally we should just match the import path and update the import statement directly
 // Helper function to apply all import path replacements
 export const applyImportPathReplacements = (
   fileContent: string,
   importPath: string,
   updatedImportPath: string
 ): string | null => {
-  const { staticImportPattern, dynamicImportPattern, requirePattern, jestMockPattern } =
+  const { staticImportPattern, dynamicImportPattern, requirePattern, jestMockPattern, jestRequireMockPattern } =
     createImportStatementRegexPatterns(importPath);
 
   return (
     setFileContentIfRegexMatches(fileContent, staticImportPattern, `from $1${updatedImportPath}$1`) ??
     setFileContentIfRegexMatches(fileContent, dynamicImportPattern, `import($1${updatedImportPath}$1)`) ??
     setFileContentIfRegexMatches(fileContent, requirePattern, `require($1${updatedImportPath}$1)`) ??
-    setFileContentIfRegexMatches(fileContent, jestMockPattern, `jest.mock($1${updatedImportPath}$1,`)
+    setFileContentIfRegexMatches(fileContent, jestMockPattern, `jest.mock($1${updatedImportPath}$1,`) ??
+    setFileContentIfRegexMatches(fileContent, jestRequireMockPattern, `jest.requireMock($1${updatedImportPath}$1)`)
   );
 };
 
