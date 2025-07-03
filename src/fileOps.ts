@@ -11,7 +11,7 @@ import {
   isMonorepoPackageImport,
   isRelativeImport,
 } from "./importUtils.js";
-import { CallExpression, ImportDeclaration } from "@babel/types";
+import { CallExpression, ExportAllDeclaration, ImportDeclaration } from "@babel/types";
 import { getPerformance } from "./performance/moveTracker";
 import path from "path";
 import { isIndexFile } from "./pathUtils";
@@ -181,18 +181,25 @@ export async function updateImportsInMovedFile(oldPath: string, newPath: string)
           const arg0 = pathNode.node.arguments[0];
           if (arg0 && arg0.type === "StringLiteral") {
             const importPath = arg0.value;
-            if (typeof importPath === "string" && (importPath.startsWith("./") || importPath.startsWith("../"))) {
-              relativeImports.push({
-                line: pathNode.node.loc?.start.line || 0,
-                originalLine:
-                  content.split("\n")[pathNode.node.loc?.start?.line ? pathNode.node.loc.start.line - 1 : 0]?.trim() ||
-                  "",
-                importPath,
-                matchedText: pathNode.toString(),
-                matchedUpdateToFilePath: "",
-              });
+            if (typeof importPath === "string" && isRelativeImport(importPath)) {
+              relativeImports.push(
+                extractImportInfo({
+                  pathNode,
+                  content,
+                  importPath,
+                  matchedUpdateToFilePath: "",
+                })
+              );
             }
           }
+        }
+      },
+      ExportAllDeclaration: (pathNode: NodePath<ExportAllDeclaration>) => {
+        const source = pathNode.node.source?.value;
+        if (typeof source === "string" && isRelativeImport(source)) {
+          relativeImports.push(
+            extractImportInfo({ pathNode, content, importPath: source, matchedUpdateToFilePath: "" })
+          );
         }
       },
     });

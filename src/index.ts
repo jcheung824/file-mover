@@ -172,8 +172,6 @@ async function moveFileAndUpdateImports(moves: Array<[fromPath: string, toPath: 
 
   tracker.endPrecomputeTimer();
 
-  // const allImportAnalysis: ImportAnalysis[] = [];
-  // const allImportPaths = Array.from(importPathCache.values()).flat();
   const invertedImportPathCache: InvertedImportPathCache = new Map();
 
   for (const [key, value] of importPathCache.entries()) {
